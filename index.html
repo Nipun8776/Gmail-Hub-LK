@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gmail Hub LK - Version 2.0</title>
+    <title>Gmail Hub LK - Emoji Version</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -11,24 +11,35 @@
         body { font-family: -apple-system, sans-serif; background: var(--gray); margin: 0; padding: 15px; }
         .card { background: var(--white); border-radius: 20px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
         
-        /* Avatar & Gender Styling */
+        /* Emoji Avatar Styling */
         .profile-row { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .avatar-box { width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--primary); background: #eee; overflow: hidden; }
-        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-box { 
+            width: 70px; height: 70px; 
+            border-radius: 50%; 
+            border: 3px solid var(--primary); 
+            background: #fff; 
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .avatar-box img { width: 90%; height: 90%; object-fit: contain; }
         
-        .gender-selector { display: flex; gap: 10px; margin-top: 5px; }
-        .gender-btn { font-size: 11px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; background: white; }
-        .gender-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .user-meta b { display: block; font-size: 19px; color: #222; }
+        .user-meta span { font-size: 11px; color: #888; background: #eee; padding: 3px 8px; border-radius: 6px; }
 
-        .balance-val { font-size: 35px; font-weight: 900; color: var(--primary); }
+        .balance-label { font-size: 12px; color: #888; text-transform: uppercase; margin-top: 15px; letter-spacing: 0.5px; }
+        .balance-val { font-size: 36px; font-weight: 900; color: var(--primary); }
         
-        /* Account Box */
-        .acc-details { background: #fffbe6; border: 2px dashed #f39c12; padding: 20px; border-radius: 15px; margin: 15px 0; display: none; }
-        .timer { font-size: 28px; font-weight: 800; color: var(--danger); text-align: center; }
+        /* Account Area */
+        .acc-details { background: #fffbe6; border: 2px dashed #f39c12; padding: 20px; border-radius: 18px; margin: 15px 0; display: none; }
+        .timer { font-size: 30px; font-weight: 900; color: var(--danger); text-align: center; font-variant-numeric: tabular-nums; }
+        .info-row { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 10px; margin: 8px 0; font-family: monospace; font-size: 14px; }
 
-        button { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-claim { background: var(--primary); color: white; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-claim { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(0,136,204,0.3); }
         .btn-done { background: var(--success); color: white; margin-top: 12px; }
+        
+        .status-msg { text-align: center; font-size: 12px; color: #aaa; margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -38,114 +49,106 @@
         <div class="avatar-box">
             <img id="u-avatar" src="https://api.dicebear.com/7.x/shapes/svg?seed=fallback">
         </div>
-        <div>
-            <b id="u-name" style="font-size: 18px;">Loading...</b>
-            <div class="gender-selector">
-                <div class="gender-btn" id="btn-male" onclick="setGender('male')">Male</div>
-                <div class="gender-btn" id="btn-female" onclick="setGender('female')">Female</div>
-            </div>
+        <div class="user-meta">
+            <b id="u-name">Syncing...</b>
+            <span id="u-id">ID: 000000000</span>
         </div>
     </div>
-    <div style="font-size: 12px; color: #888;">Earning Balance</div>
+    <div class="balance-label">Total Earnings</div>
     <div class="balance-val">Rs. <span id="u-balance">0.00</span></div>
 </div>
 
-<div id="main-section">
-    <button class="btn-claim" onclick="requestAccount()">Get New Account</button>
+<div id="main-ui">
+    <button class="btn-claim" id="claim-btn" onclick="requestAccount()">Get New Account</button>
+    <div class="status-msg" id="status-txt">Ready to work</div>
 </div>
 
-<div id="task-section" class="card acc-details">
-    <div class="timer" id="timer-txt">10:00</div>
-    <div style="font-family: monospace; font-size: 14px; margin: 15px 0;">
-        Email: <b id="d-email"></b><br>
-        Password: <b id="d-pass"></b><br>
-        First Name: <b id="d-fname"></b>
-    </div>
-    <button class="btn-done" onclick="submitWork()">Registration Done</button>
-    <button style="background:none; color:#888; font-size:13px; margin-top:8px;" onclick="cancelWork()">Cancel</button>
+<div id="task-ui" class="card acc-details">
+    <div class="timer" id="timer-val">10:00</div>
+    <div class="info-row"><b>Email:</b> <span id="d-email"></span></div>
+    <div class="info-row"><b>Pass:</b> <span id="d-pass"></span></div>
+    <div class="info-row"><b>Name:</b> <span id="d-fname"></span></div>
+    
+    <button class="btn-done" onclick="submitTask()">Registration Done</button>
+    <button style="background:none; color:#888; font-size:13px; margin-top:10px;" onclick="cancelTask()">Release & Exit</button>
 </div>
 
 <script>
     const SB_URL = "https://uohkgkcykfcyavmafbai.supabase.co";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvaGtna2N5kZjeWF2bWFmYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyOTI5NDksImV4cCI6MjA4NTg2ODk0OX0.syN_lHByHWE2KolyK6snm5jIML68HFxBisHKnZthNHw";
+    
     const { createClient } = supabase;
     const client = createClient(SB_URL, SB_KEY);
     const tg = window.Telegram.WebApp;
 
-    let activeId = null;
-    let timerRef = null;
+    let activeAccId = null;
+    let countdown = null;
 
-    async function init() {
+    async function start() {
         tg.ready();
         tg.expand();
         const user = tg.initDataUnsafe?.user;
 
         if (user) {
             document.getElementById('u-name').innerText = user.first_name;
-            // Default avatar based on ID (Shapes Style)
-            updateAvatar(user.id, 'shapes');
+            document.getElementById('u-id').innerText = "ID: " + user.id;
             
+            // --- Random Shape/Emoji Avatar logic ---
+            // 'shapes' style එකෙන් ඔයා එවපු පින්තූරෙට සමාන රූප හැදෙනවා
+            document.getElementById('u-avatar').src = `https://api.dicebear.com/7.x/shapes/svg?seed=${user.id}`;
+
             await client.from('profiles').upsert({ telegram_id: user.id, username: user.username });
-            loadBalance(user.id);
+            refreshData(user.id);
         }
     }
 
-    function setGender(type) {
-        const user = tg.initDataUnsafe?.user;
-        document.getElementById('btn-male').classList.remove('active');
-        document.getElementById('btn-female').classList.remove('active');
-        document.getElementById(`btn-${type}`).classList.add('active');
-
-        // Gender එක අනුව Avatar Style එක වෙනස් කරන්න පුළුවන්
-        // Male නම් 'pixel-art', Female නම් 'lorelei' වගේ
-        const style = (type === 'male') ? 'pixel-art' : 'lorelei';
-        updateAvatar(user.id, style);
-    }
-
-    function updateAvatar(id, style) {
-        document.getElementById('u-avatar').src = `https://api.dicebear.com/7.x/${style}/svg?seed=${id}`;
-    }
-
-    async function loadBalance(id) {
-        const { data } = await client.from('profiles').select('balance').eq('telegram_id', id).single();
+    async function refreshData(tid) {
+        const { data } = await client.from('profiles').select('balance').eq('telegram_id', tid).single();
         if (data) document.getElementById('u-balance').innerText = data.balance.toFixed(2);
     }
 
     async function requestAccount() {
+        document.getElementById('status-txt').innerText = "Checking stock...";
         const { data: acc } = await client.from('accounts').select('*').eq('status', 'available').limit(1).single();
+
         if (acc) {
-            activeId = acc.id;
-            document.getElementById('main-section').style.display = 'none';
-            document.getElementById('task-section').style.display = 'block';
+            activeAccId = acc.id;
+            document.getElementById('main-ui').style.display = 'none';
+            document.getElementById('task-ui').style.display = 'block';
+            
             document.getElementById('d-email').innerText = acc.email;
             document.getElementById('d-pass').innerText = acc.password;
             document.getElementById('d-fname').innerText = acc.first_name;
-            startCountdown(600);
+            
+            runTimer(600);
         } else {
-            tg.showAlert("No accounts available!");
+            tg.showAlert("No stock left! Try again later.");
+            document.getElementById('status-txt').innerText = "Out of Stock";
         }
     }
 
-    function startCountdown(sec) {
-        timerRef = setInterval(() => {
+    function runTimer(sec) {
+        countdown = setInterval(() => {
             sec--;
             let m = Math.floor(sec/60), s = sec%60;
-            document.getElementById('timer-txt').innerText = `${m}:${s<10?'0':''}${s}`;
-            if (sec <= 0) { clearInterval(timerRef); cancelWork(); }
+            document.getElementById('timer-val').innerText = `${m}:${s<10?'0':''}${s}`;
+            if (sec <= 0) { clearInterval(countdown); cancelTask(); }
         }, 1000);
     }
 
-    async function submitWork() {
-        await client.from('accounts').update({ status: 'pending_approval' }).eq('id', activeId);
+    async function submitTask() {
+        await client.from('accounts').update({ status: 'pending_approval' }).eq('id', activeAccId);
         location.reload();
     }
 
-    async function cancelWork() {
-        await client.from('accounts').update({ status: 'available', holder_id: null }).eq('id', activeId);
+    async function cancelTask() {
+        if (activeAccId) {
+            await client.from('accounts').update({ status: 'available', holder_id: null }).eq('id', activeAccId);
+        }
         location.reload();
     }
 
-    window.onload = init;
+    window.onload = start;
 </script>
 </body>
 </html>
