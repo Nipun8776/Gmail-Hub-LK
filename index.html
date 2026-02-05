@@ -11,9 +11,17 @@
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--gray); margin: 0; padding: 15px; color: #333; }
         .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
         
-        .profile-row { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
-        .avatar { width: 45px; height: 45px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; }
-        .user-meta b { display: block; font-size: 16px; }
+        /* Avatar Styling */
+        .profile-row { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .avatar-img { 
+            width: 60px; height: 60px; 
+            border-radius: 15px; 
+            background: #e0eafc; 
+            border: 2px solid var(--primary);
+            object-fit: cover;
+        }
+        
+        .user-meta b { display: block; font-size: 18px; margin-bottom: 2px; }
         .user-meta span { font-size: 11px; color: #888; background: #eee; padding: 2px 6px; border-radius: 4px; }
         
         .balance-label { font-size: 12px; color: #888; text-transform: uppercase; margin-top: 10px; }
@@ -21,8 +29,6 @@
         
         button { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-claim { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(0,136,204,0.3); }
-        .btn-claim:disabled { background: #ccc; box-shadow: none; }
-        
         .status-bar { text-align: center; font-size: 12px; color: #999; margin-top: 10px; }
     </style>
 </head>
@@ -30,9 +36,10 @@
 
 <div class="card">
     <div class="profile-row">
-        <div class="avatar" id="u-avatar">?</div>
+        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=fallback" class="avatar-img" id="u-avatar-img">
+        
         <div class="user-meta">
-            <b id="u-name">Unknown User</b>
+            <b id="u-name">Syncing...</b>
             <span id="u-id">ID: 000000000</span>
         </div>
     </div>
@@ -42,10 +49,8 @@
 
 <div id="action-area">
     <button class="btn-claim" id="claim-btn" onclick="handleClaim()">Get New Account</button>
-    <div class="status-bar" id="status-text">Connecting to system...</div>
+    <div class="status-bar" id="status-text">System Online</div>
 </div>
-
-<div id="history-area" style="margin-top: 20px;"></div>
 
 <script>
     const SB_URL = "https://uohkgkcykfcyavmafbai.supabase.co";
@@ -62,51 +67,34 @@
         const user = tg.initDataUnsafe?.user;
 
         if (user) {
-            // Update UI
+            // Update Name and ID
             document.getElementById('u-name').innerText = user.first_name;
             document.getElementById('u-id').innerText = "ID: " + user.id;
-            document.getElementById('u-avatar').innerText = user.first_name.charAt(0);
+
+            // --- Random Avatar Logic ---
+            // යූසර්ගේ ID එක Seed එකක් විදියට පාවිච්චි කරනවා, එතකොට හැමදාම එයාට එකම ලස්සන රූපේ ලැබෙනවා
+            const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`;
+            document.getElementById('u-avatar-img').src = avatarUrl;
 
             try {
-                // Sync user with Supabase
                 await client.from('profiles').upsert({ 
                     telegram_id: user.id, 
                     username: user.username || "none" 
                 });
 
-                // Load User Data
                 const { data: profile } = await client.from('profiles').select('*').eq('telegram_id', user.id).single();
                 if (profile) {
                     document.getElementById('u-balance').innerText = profile.balance.toFixed(2);
                 }
-                
-                document.getElementById('status-text').innerText = "System Online";
             } catch (err) {
-                document.getElementById('status-text').innerText = "Database Error";
+                console.log("DB Error");
             }
-        } else {
-            document.getElementById('u-name').innerText = "Desktop Preview";
-            document.getElementById('status-text').innerText = "Please open in Telegram";
         }
     }
 
     async function handleClaim() {
-        const user = tg.initDataUnsafe?.user;
-        if (!user) return alert("Use Telegram!");
-
-        document.getElementById('claim-btn').disabled = true;
-        document.getElementById('status-text').innerText = "Checking stock...";
-
-        const { data: acc, error } = await client.from('accounts').select('*').eq('status', 'available').limit(1).single();
-
-        if (acc) {
-            tg.showAlert("Account assigned: " + acc.email);
-            // Add your locking logic here
-        } else {
-            tg.showAlert("Out of stock!");
-            document.getElementById('claim-btn').disabled = false;
-        }
-        document.getElementById('status-text').innerText = "Process Complete";
+        // Claim logic...
+        tg.showAlert("Claim system coming soon!");
     }
 
     window.onload = initApp;
