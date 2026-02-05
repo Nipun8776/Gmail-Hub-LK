@@ -3,28 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gmail Hub LK - Realtime</title>
+    <title>Gmail Hub LK</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --primary: #0088cc; --success: #27ae60; --dark: #2c3e50; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin: 0; padding: 15px; }
-        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        
-        .user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .user-avatar { width: 40px; height: 40px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        
-        .balance-label { font-size: 12px; color: #777; text-transform: uppercase; }
-        .balance-val { font-size: 30px; font-weight: bold; color: var(--primary); }
-        
-        .acc-box { background: #fffbe6; border: 2px dashed #f39c12; padding: 15px; border-radius: 10px; margin: 15px 0; display: none; }
-        .timer { font-size: 24px; font-weight: bold; color: #e74c3c; text-align: center; }
-        
-        button { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-claim { background: var(--primary); color: white; }
-        .btn-done { background: var(--success); color: white; margin-top: 10px; }
-        
-        .id-badge { font-size: 10px; background: #eee; padding: 2px 6px; border-radius: 4px; color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f7f9; margin: 0; padding: 15px; color: var(--dark); }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .user-info { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; }
+        .user-avatar { width: 45px; height: 45px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; }
+        .id-badge { font-size: 11px; background: #f0f0f0; padding: 3px 8px; border-radius: 5px; color: #666; margin-top: 4px; display: inline-block; }
+        .balance-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .balance-val { font-size: 32px; font-weight: 800; color: var(--primary); margin-top: 5px; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-claim { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3); }
+        .btn-claim:active { transform: scale(0.98); }
+        #status-msg { text-align: center; font-size: 13px; margin-top: 10px; color: #888; }
     </style>
 </head>
 <body>
@@ -33,129 +27,104 @@
     <div class="user-info">
         <div class="user-avatar" id="avatar-init">?</div>
         <div>
-            <div id="u-full-name" style="font-weight: bold;">Loading Name...</div>
-            <div class="id-badge">ID: <span id="u-telegram-id">00000000</span></div>
+            <div id="u-name" style="font-weight: 700; font-size: 18px;">Syncing...</div>
+            <div class="id-badge" id="u-id">ID: 0000000000</div>
         </div>
     </div>
-
-    <div class="balance-label">Available Balance</div>
+    <div class="balance-label">Total Balance</div>
     <div class="balance-val">Rs. <span id="u-balance">0.00</span></div>
 </div>
 
 <div id="claim-area">
-    <button class="btn-claim" onclick="claimAccount()">Get New Account (+Rs. 50)</button>
+    <button class="btn-claim" onclick="claimAccount()">Get New Account</button>
+    <div id="status-msg">Ready to work</div>
 </div>
 
-<div id="task-area" class="card acc-box">
-    <div class="timer" id="timer">10:00</div>
-    <div style="font-family: monospace; font-size: 14px; margin-top: 10px; line-height: 1.6;">
-        Email: <b id="d-email"></b><br>
-        Pass: <b id="d-pass"></b><br>
-        Name: <b id="d-name"></b>
-    </div>
-    <button class="btn-done" onclick="submitTask()">Registration Done</button>
-    <button onclick="cancelTask()" style="background:none; color: #999; margin-top: 10px;">Release Account</button>
-</div>
-
-<div style="font-weight: bold; margin: 20px 5px 10px;">Recent History</div>
-<div id="history-list"></div>
+<div id="history-list" style="margin-top: 20px;"></div>
 
 <script>
-    const sbUrl = "https://uohkgkcykfcyavmafbai.supabase.co";
-    const sbKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvaGtna2N5kZjeWF2bWFmYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyOTI5NDksImV4cCI6MjA4NTg2ODk0OX0.syN_lHByHWE2KolyK6snm5jIML68HFxBisHKnZthNHw";
-    const supabase = document.supabasejs.createClient(sbUrl, sbKey);
+    // Configuration
+    const SB_URL = "https://uohkgkcykfcyavmafbai.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvaGtna2N5kfcyavmafbaiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyOTI5NDksImV4cCI6MjA4NTg2ODk0OX0.syN_lHByHWE2KolyK6snm5jIML68HFxBisHKnZthNHw";
+    
+    const { createClient } = supabase;
+    const client = createClient(SB_URL, SB_KEY);
+    
     const tg = window.Telegram.WebApp;
-    tg.expand();
 
-    const userData = tg.initDataUnsafe?.user;
-    let activeAccId = null;
+    async function initializeApp() {
+        // Notify Telegram that the app is ready
+        tg.ready();
+        tg.expand();
 
-    async function start() {
-        if (!userData) {
-            alert("Please open this inside Telegram!");
-            return;
+        const user = tg.initDataUnsafe?.user;
+
+        if (user) {
+            // 1. Update UI immediately
+            document.getElementById('u-name').innerText = user.first_name + (user.last_name ? " " + user.last_name : "");
+            document.getElementById('u-id').innerText = "ID: " + user.id;
+            document.getElementById('avatar-init').innerText = user.first_name.charAt(0);
+
+            try {
+                // 2. Sync User with Supabase
+                const { error: upsertError } = await client.from('profiles').upsert({ 
+                    telegram_id: user.id, 
+                    username: user.username || "no_username"
+                });
+
+                if (upsertError) throw upsertError;
+
+                // 3. Load Balance
+                const { data: profile, error: fetchError } = await client
+                    .from('profiles')
+                    .select('balance')
+                    .eq('telegram_id', user.id)
+                    .single();
+
+                if (profile) {
+                    document.getElementById('u-balance').innerText = profile.balance.toFixed(2);
+                }
+                
+                document.getElementById('status-msg').innerText = "Connected to Server";
+
+            } catch (err) {
+                console.error("Database Error:", err);
+                document.getElementById('status-msg').innerText = "Sync Error: Check SQL Policies";
+            }
+        } else {
+            document.getElementById('u-name').innerText = "Run inside Telegram";
+            document.getElementById('status-msg').innerText = "InitData not found";
         }
-
-        // Show Telegram Info
-        document.getElementById('u-full-name').innerText = userData.first_name + (userData.last_name ? " " + userData.last_name : "");
-        document.getElementById('u-telegram-id').innerText = userData.id;
-        document.getElementById('avatar-init').innerText = userData.first_name.charAt(0);
-
-        // Sync with Supabase
-        await supabase.from('profiles').upsert({ 
-            telegram_id: userData.id, 
-            username: userData.username 
-        });
-
-        loadDashboard();
-    }
-
-    async function loadDashboard() {
-        // Load Balance & Stats
-        const { data: p } = await supabase.from('profiles').select('*').eq('telegram_id', userData.id).single();
-        if (p) {
-            document.getElementById('u-balance').innerText = p.balance.toFixed(2);
-        }
-
-        // Load History
-        const { data: history } = await supabase.from('accounts')
-            .select('*')
-            .eq('holder_id', userData.id)
-            .order('created_at', { ascending: false })
-            .limit(10);
-
-        const list = document.getElementById('history-list');
-        list.innerHTML = history.length ? history.map(h => `
-            <div class="card" style="padding: 10px; font-size: 13px; margin-bottom: 8px;">
-                <span style="float:right; font-weight:bold; color:${h.status==='sold'?'green':'#f39c12'}">${h.status.toUpperCase()}</span>
-                ${h.email}
-            </div>
-        `).join('') : "<p style='text-align:center; color:#999;'>No history found.</p>";
     }
 
     async function claimAccount() {
-        const { data: acc } = await supabase.from('accounts').select('*').eq('status', 'available').limit(1).single();
-        if (acc) {
-            activeAccId = acc.id;
-            await supabase.from('accounts').update({ 
-                status: 'locked', 
-                holder_id: userData.id, 
-                locked_until: new Date(Date.now() + 600000).toISOString() 
-            }).eq('id', acc.id);
+        const user = tg.initDataUnsafe?.user;
+        if (!user) {
+            tg.showAlert("Please use Telegram App");
+            return;
+        }
 
-            document.getElementById('claim-area').style.display = 'none';
-            document.getElementById('task-area').style.display = 'block';
-            document.getElementById('d-email').innerText = acc.email;
-            document.getElementById('d-pass').innerText = acc.password;
-            document.getElementById('d-name').innerText = acc.first_name;
-            startTimer(600);
+        document.getElementById('status-msg').innerText = "Searching stock...";
+
+        const { data: acc, error } = await client
+            .from('accounts')
+            .select('*')
+            .eq('status', 'available')
+            .limit(1)
+            .single();
+
+        if (acc) {
+            // Lock logic would go here
+            tg.showAlert("Account found: " + acc.email);
+            document.getElementById('status-msg').innerText = "Account Assigned";
         } else {
-            tg.showAlert("No stock available at the moment.");
+            tg.showAlert("No accounts available in stock!");
+            document.getElementById('status-msg').innerText = "Stock Empty";
         }
     }
 
-    async function submitTask() {
-        if (!activeAccId) return;
-        await supabase.from('accounts').update({ status: 'pending_approval' }).eq('id', activeAccId);
-        location.reload();
-    }
-
-    async function cancelTask() {
-        if (!activeAccId) return;
-        await supabase.from('accounts').update({ status: 'available', holder_id: null }).eq('id', activeAccId);
-        location.reload();
-    }
-
-    function startTimer(s) {
-        const timerObj = setInterval(() => {
-            s--;
-            let m = Math.floor(s/60), sec = s%60;
-            document.getElementById('timer').innerText = `${m}:${sec<10?'0':''}${sec}`;
-            if (s <= 0) { clearInterval(timerObj); cancelTask(); }
-        }, 1000);
-    }
-
-    start();
+    // Run initialization
+    window.onload = initializeApp;
 </script>
 </body>
 </html>
