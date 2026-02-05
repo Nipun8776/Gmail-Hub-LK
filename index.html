@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gmail Hub LK - Emoji Version</title>
+    <title>Gmail Hub LK - Professional</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -11,18 +11,16 @@
         body { font-family: -apple-system, sans-serif; background: var(--gray); margin: 0; padding: 15px; }
         .card { background: var(--white); border-radius: 20px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
         
-        /* Emoji Avatar Styling */
+        /* Mood Avatar Styling */
         .profile-row { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .avatar-box { 
+        .mood-avatar { 
             width: 70px; height: 70px; 
-            border-radius: 50%; 
-            border: 3px solid var(--primary); 
-            background: #fff; 
-            overflow: hidden;
+            border-radius: 20px; 
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            font-size: 40px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border: 3px solid white;
         }
-        .avatar-box img { width: 90%; height: 90%; object-fit: contain; }
         
         .user-meta b { display: block; font-size: 19px; color: #222; }
         .user-meta span { font-size: 11px; color: #888; background: #eee; padding: 3px 8px; border-radius: 6px; }
@@ -30,37 +28,33 @@
         .balance-label { font-size: 12px; color: #888; text-transform: uppercase; margin-top: 15px; letter-spacing: 0.5px; }
         .balance-val { font-size: 36px; font-weight: 900; color: var(--primary); }
         
-        /* Account Area */
+        /* Task Area */
         .acc-details { background: #fffbe6; border: 2px dashed #f39c12; padding: 20px; border-radius: 18px; margin: 15px 0; display: none; }
-        .timer { font-size: 30px; font-weight: 900; color: var(--danger); text-align: center; font-variant-numeric: tabular-nums; }
-        .info-row { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 10px; margin: 8px 0; font-family: monospace; font-size: 14px; }
+        .timer { font-size: 30px; font-weight: 900; color: var(--danger); text-align: center; }
+        .info-row { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 10px; margin: 8px 0; font-family: monospace; font-size: 14px; word-break: break-all; }
 
         button { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-claim { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(0,136,204,0.3); }
         .btn-done { background: var(--success); color: white; margin-top: 12px; }
-        
-        .status-msg { text-align: center; font-size: 12px; color: #aaa; margin-top: 12px; }
+        .btn-cancel { background: none; color: #888; font-size: 13px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div class="profile-row">
-        <div class="avatar-box">
-            <img id="u-avatar" src="https://api.dicebear.com/7.x/shapes/svg?seed=fallback">
-        </div>
+        <div id="u-mood-box" class="mood-avatar">🔥</div>
         <div class="user-meta">
-            <b id="u-name">Syncing...</b>
+            <b id="u-name">Loading...</b>
             <span id="u-id">ID: 000000000</span>
         </div>
     </div>
-    <div class="balance-label">Total Earnings</div>
+    <div class="balance-label">Current Balance</div>
     <div class="balance-val">Rs. <span id="u-balance">0.00</span></div>
 </div>
 
 <div id="main-ui">
-    <button class="btn-claim" id="claim-btn" onclick="requestAccount()">Get New Account</button>
-    <div class="status-msg" id="status-txt">Ready to work</div>
+    <button class="btn-claim" onclick="requestAccount()">Get New Account</button>
 </div>
 
 <div id="task-ui" class="card acc-details">
@@ -68,23 +62,25 @@
     <div class="info-row"><b>Email:</b> <span id="d-email"></span></div>
     <div class="info-row"><b>Pass:</b> <span id="d-pass"></span></div>
     <div class="info-row"><b>Name:</b> <span id="d-fname"></span></div>
-    
     <button class="btn-done" onclick="submitTask()">Registration Done</button>
-    <button style="background:none; color:#888; font-size:13px; margin-top:10px;" onclick="cancelTask()">Release & Exit</button>
+    <button class="btn-cancel" onclick="cancelTask()">Cancel</button>
 </div>
 
 <script>
     const SB_URL = "https://uohkgkcykfcyavmafbai.supabase.co";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvaGtna2N5kZjeWF2bWFmYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyOTI5NDksImV4cCI6MjA4NTg2ODk0OX0.syN_lHByHWE2KolyK6snm5jIML68HFxBisHKnZthNHw";
-    
     const { createClient } = supabase;
     const client = createClient(SB_URL, SB_KEY);
     const tg = window.Telegram.WebApp;
 
-    let activeAccId = null;
-    let countdown = null;
+    // මෙතන තියෙන්නේ Neutral Cool Emojis විතරයි
+    const moods = ["🔥", "🚀", "😎", "🤩", "🤖", "👻", "💎", "⚡", "🦁", "🦊", "🥷", "🌟", "👾", "🏆", "🎯"];
+    const colors = ["#FFD6A5", "#FDFFB6", "#CAFFBF", "#9BF6FF", "#A0C4FF", "#BDB2FF", "#FFC6FF", "#E2F0CB", "#FF9999"];
 
-    async function start() {
+    let activeAccId = null;
+    let timerInterval = null;
+
+    async function init() {
         tg.ready();
         tg.expand();
         const user = tg.initDataUnsafe?.user;
@@ -93,46 +89,45 @@
             document.getElementById('u-name').innerText = user.first_name;
             document.getElementById('u-id').innerText = "ID: " + user.id;
             
-            // --- Random Shape/Emoji Avatar logic ---
-            // 'shapes' style එකෙන් ඔයා එවපු පින්තූරෙට සමාන රූප හැදෙනවා
-            document.getElementById('u-avatar').src = `https://api.dicebear.com/7.x/shapes/svg?seed=${user.id}`;
+            // Randomly select mood and color based on ID
+            const moodIndex = user.id % moods.length;
+            const colorIndex = user.id % colors.length;
+            
+            const moodBox = document.getElementById('u-mood-box');
+            moodBox.innerText = moods[moodIndex];
+            moodBox.style.backgroundColor = colors[colorIndex];
 
             await client.from('profiles').upsert({ telegram_id: user.id, username: user.username });
-            refreshData(user.id);
+            loadBalance(user.id);
         }
     }
 
-    async function refreshData(tid) {
-        const { data } = await client.from('profiles').select('balance').eq('telegram_id', tid).single();
+    async function loadBalance(id) {
+        const { data } = await client.from('profiles').select('balance').eq('telegram_id', id).single();
         if (data) document.getElementById('u-balance').innerText = data.balance.toFixed(2);
     }
 
     async function requestAccount() {
-        document.getElementById('status-txt').innerText = "Checking stock...";
         const { data: acc } = await client.from('accounts').select('*').eq('status', 'available').limit(1).single();
-
         if (acc) {
             activeAccId = acc.id;
             document.getElementById('main-ui').style.display = 'none';
             document.getElementById('task-ui').style.display = 'block';
-            
             document.getElementById('d-email').innerText = acc.email;
             document.getElementById('d-pass').innerText = acc.password;
             document.getElementById('d-fname').innerText = acc.first_name;
-            
-            runTimer(600);
+            startTimer(600);
         } else {
-            tg.showAlert("No stock left! Try again later.");
-            document.getElementById('status-txt').innerText = "Out of Stock";
+            tg.showAlert("No accounts available!");
         }
     }
 
-    function runTimer(sec) {
-        countdown = setInterval(() => {
-            sec--;
-            let m = Math.floor(sec/60), s = sec%60;
-            document.getElementById('timer-val').innerText = `${m}:${s<10?'0':''}${s}`;
-            if (sec <= 0) { clearInterval(countdown); cancelTask(); }
+    function startTimer(duration) {
+        let timer = duration;
+        timerInterval = setInterval(() => {
+            let m = Math.floor(timer / 60), s = timer % 60;
+            document.getElementById('timer-val').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if (--timer < 0) { clearInterval(timerInterval); cancelTask(); }
         }, 1000);
     }
 
@@ -148,7 +143,7 @@
         location.reload();
     }
 
-    window.onload = start;
+    window.onload = init;
 </script>
 </body>
 </html>
