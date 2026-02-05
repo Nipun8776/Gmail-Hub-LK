@@ -1,110 +1,161 @@
 <!DOCTYPE html>
-<html lang="si">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Gmail Hub LK - Order System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gmail Hub LK - Realtime</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; max-width: 600px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .status-pending { color: orange; font-weight: bold; }
-        .status-completed { color: green; font-weight: bold; }
-        .timer { font-size: 20px; color: red; margin: 10px 0; }
-        input, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ddd; }
-        button { background: #007bff; color: white; cursor: pointer; border: none; }
-        .admin-section { border-top: 2px dashed #ccc; margin-top: 30px; padding-top: 20px; }
+        :root { --primary: #0088cc; --success: #27ae60; --dark: #2c3e50; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin: 0; padding: 15px; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        
+        .user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .user-avatar { width: 40px; height: 40px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        .balance-label { font-size: 12px; color: #777; text-transform: uppercase; }
+        .balance-val { font-size: 30px; font-weight: bold; color: var(--primary); }
+        
+        .acc-box { background: #fffbe6; border: 2px dashed #f39c12; padding: 15px; border-radius: 10px; margin: 15px 0; display: none; }
+        .timer { font-size: 24px; font-weight: bold; color: #e74c3c; text-align: center; }
+        
+        button { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-claim { background: var(--primary); color: white; }
+        .btn-done { background: var(--success); color: white; margin-top: 10px; }
+        
+        .id-badge { font-size: 10px; background: #eee; padding: 2px 6px; border-radius: 4px; color: #555; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📧 Gmail Hub LK - User Panel</h2>
-    <div id="user-info">
-        <input type="text" id="tg-id" placeholder="Enter Telegram ID to Login">
-        <button onclick="login()">Login</button>
+    <div class="user-info">
+        <div class="user-avatar" id="avatar-init">?</div>
+        <div>
+            <div id="u-full-name" style="font-weight: bold;">Loading Name...</div>
+            <div class="id-badge">ID: <span id="u-telegram-id">00000000</span></div>
+        </div>
     </div>
 
-    <div id="order-section" style="display:none;">
-        <p>ඔබේ Telegram ID: <span id="display-tg-id"></span></p>
-        <button onclick="placeOrder()">Place New Gmail Order (Rs. 100)</button>
-        
-        <h3>මගේ ඇණවුම් (My Orders)</h3>
-        <div id="my-orders"></div>
-    </div>
-
-    <div class="admin-section">
-        <h3>🛠 Admin Panel (For You)</h3>
-        <div id="admin-orders"></div>
-    </div>
+    <div class="balance-label">Available Balance</div>
+    <div class="balance-val">Rs. <span id="u-balance">0.00</span></div>
 </div>
 
-<script>
-    let orders = JSON.parse(localStorage.getItem('orders')) || [];
-    let currentUser = null;
+<div id="claim-area">
+    <button class="btn-claim" onclick="claimAccount()">Get New Account (+Rs. 50)</button>
+</div>
 
-    function login() {
-        const id = document.getElementById('tg-id').value;
-        if(id) {
-            currentUser = id;
-            document.getElementById('user-info').style.display = 'none';
-            document.getElementById('order-section').style.display = 'block';
-            document.getElementById('display-tg-id').innerText = id;
-            renderOrders();
+<div id="task-area" class="card acc-box">
+    <div class="timer" id="timer">10:00</div>
+    <div style="font-family: monospace; font-size: 14px; margin-top: 10px; line-height: 1.6;">
+        Email: <b id="d-email"></b><br>
+        Pass: <b id="d-pass"></b><br>
+        Name: <b id="d-name"></b>
+    </div>
+    <button class="btn-done" onclick="submitTask()">Registration Done</button>
+    <button onclick="cancelTask()" style="background:none; color: #999; margin-top: 10px;">Release Account</button>
+</div>
+
+<div style="font-weight: bold; margin: 20px 5px 10px;">Recent History</div>
+<div id="history-list"></div>
+
+<script>
+    const sbUrl = "https://uohkgkcykfcyavmafbai.supabase.co";
+    const sbKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvaGtna2N5kZjeWF2bWFmYmFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyOTI5NDksImV4cCI6MjA4NTg2ODk0OX0.syN_lHByHWE2KolyK6snm5jIML68HFxBisHKnZthNHw";
+    const supabase = document.supabasejs.createClient(sbUrl, sbKey);
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const userData = tg.initDataUnsafe?.user;
+    let activeAccId = null;
+
+    async function start() {
+        if (!userData) {
+            alert("Please open this inside Telegram!");
+            return;
+        }
+
+        // Show Telegram Info
+        document.getElementById('u-full-name').innerText = userData.first_name + (userData.last_name ? " " + userData.last_name : "");
+        document.getElementById('u-telegram-id').innerText = userData.id;
+        document.getElementById('avatar-init').innerText = userData.first_name.charAt(0);
+
+        // Sync with Supabase
+        await supabase.from('profiles').upsert({ 
+            telegram_id: userData.id, 
+            username: userData.username 
+        });
+
+        loadDashboard();
+    }
+
+    async function loadDashboard() {
+        // Load Balance & Stats
+        const { data: p } = await supabase.from('profiles').select('*').eq('telegram_id', userData.id).single();
+        if (p) {
+            document.getElementById('u-balance').innerText = p.balance.toFixed(2);
+        }
+
+        // Load History
+        const { data: history } = await supabase.from('accounts')
+            .select('*')
+            .eq('holder_id', userData.id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        const list = document.getElementById('history-list');
+        list.innerHTML = history.length ? history.map(h => `
+            <div class="card" style="padding: 10px; font-size: 13px; margin-bottom: 8px;">
+                <span style="float:right; font-weight:bold; color:${h.status==='sold'?'green':'#f39c12'}">${h.status.toUpperCase()}</span>
+                ${h.email}
+            </div>
+        `).join('') : "<p style='text-align:center; color:#999;'>No history found.</p>";
+    }
+
+    async function claimAccount() {
+        const { data: acc } = await supabase.from('accounts').select('*').eq('status', 'available').limit(1).single();
+        if (acc) {
+            activeAccId = acc.id;
+            await supabase.from('accounts').update({ 
+                status: 'locked', 
+                holder_id: userData.id, 
+                locked_until: new Date(Date.now() + 600000).toISOString() 
+            }).eq('id', acc.id);
+
+            document.getElementById('claim-area').style.display = 'none';
+            document.getElementById('task-area').style.display = 'block';
+            document.getElementById('d-email').innerText = acc.email;
+            document.getElementById('d-pass').innerText = acc.password;
+            document.getElementById('d-name').innerText = acc.first_name;
+            startTimer(600);
+        } else {
+            tg.showAlert("No stock available at the moment.");
         }
     }
 
-    function placeOrder() {
-        const newOrder = {
-            id: Date.now(),
-            user: currentUser,
-            status: 'Pending',
-            details: 'Processing...',
-            timeLeft: 60, // විනාඩි 60ක් දෙමු
-            createdAt: new Date().toLocaleString()
-        };
-        orders.push(newOrder);
-        saveAndRefresh();
+    async function submitTask() {
+        if (!activeAccId) return;
+        await supabase.from('accounts').update({ status: 'pending_approval' }).eq('id', activeAccId);
+        location.reload();
     }
 
-    function completeOrder(orderId) {
-        const mail = prompt("Enter Gmail Address:");
-        const pass = prompt("Enter Password:");
-        
-        orders = orders.map(o => {
-            if(o.id === orderId) {
-                return { ...o, status: 'Completed', details: `Email: ${mail} | Pass: ${pass}`, timeLeft: 0 };
-            }
-            return o;
-        });
-        saveAndRefresh();
+    async function cancelTask() {
+        if (!activeAccId) return;
+        await supabase.from('accounts').update({ status: 'available', holder_id: null }).eq('id', activeAccId);
+        location.reload();
     }
 
-    function saveAndRefresh() {
-        localStorage.setItem('orders', JSON.stringify(orders));
-        renderOrders();
+    function startTimer(s) {
+        const timerObj = setInterval(() => {
+            s--;
+            let m = Math.floor(s/60), sec = s%60;
+            document.getElementById('timer').innerText = `${m}:${sec<10?'0':''}${sec}`;
+            if (s <= 0) { clearInterval(timerObj); cancelTask(); }
+        }, 1000);
     }
 
-    function renderOrders() {
-        // User Side
-        const userDiv = document.getElementById('my-orders');
-        const myOrders = orders.filter(o => o.user === currentUser);
-        userDiv.innerHTML = myOrders.map(o => `
-            <div style="border:1px solid #eee; padding:10px; margin-bottom:5px;">
-                Order ID: ${o.id} <br>
-                Status: <span class="status-${o.status.toLowerCase()}">${o.status}</span> <br>
-                Data: <b>${o.details}</b>
-            </div>
-        `).join('');
-
-        // Admin Side
-        const adminDiv = document.getElementById('admin-orders');
-        adminDiv.innerHTML = orders.filter(o => o.status === 'Pending').map(o => `
-            <div style="background:#fff9e6; padding:10px; margin-bottom:5px;">
-                User: ${o.user} | Time: ${o.createdAt}
-                <button style="background:green;" onclick="completeOrder(${o.id})">Complete Order</button>
-            </div>
-        `).join('');
-    }
+    start();
 </script>
-
 </body>
 </html>
