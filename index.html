@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <title>Gmail Hub LK - Order System</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; max-width: 600px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .status-pending { color: orange; font-weight: bold; }
+        .status-completed { color: green; font-weight: bold; }
+        .timer { font-size: 20px; color: red; margin: 10px 0; }
+        input, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ddd; }
+        button { background: #007bff; color: white; cursor: pointer; border: none; }
+        .admin-section { border-top: 2px dashed #ccc; margin-top: 30px; padding-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>📧 Gmail Hub LK - User Panel</h2>
+    <div id="user-info">
+        <input type="text" id="tg-id" placeholder="Enter Telegram ID to Login">
+        <button onclick="login()">Login</button>
+    </div>
+
+    <div id="order-section" style="display:none;">
+        <p>ඔබේ Telegram ID: <span id="display-tg-id"></span></p>
+        <button onclick="placeOrder()">Place New Gmail Order (Rs. 100)</button>
+        
+        <h3>මගේ ඇණවුම් (My Orders)</h3>
+        <div id="my-orders"></div>
+    </div>
+
+    <div class="admin-section">
+        <h3>🛠 Admin Panel (For You)</h3>
+        <div id="admin-orders"></div>
+    </div>
+</div>
+
+<script>
+    let orders = JSON.parse(localStorage.getItem('orders')) || [];
+    let currentUser = null;
+
+    function login() {
+        const id = document.getElementById('tg-id').value;
+        if(id) {
+            currentUser = id;
+            document.getElementById('user-info').style.display = 'none';
+            document.getElementById('order-section').style.display = 'block';
+            document.getElementById('display-tg-id').innerText = id;
+            renderOrders();
+        }
+    }
+
+    function placeOrder() {
+        const newOrder = {
+            id: Date.now(),
+            user: currentUser,
+            status: 'Pending',
+            details: 'Processing...',
+            timeLeft: 60, // විනාඩි 60ක් දෙමු
+            createdAt: new Date().toLocaleString()
+        };
+        orders.push(newOrder);
+        saveAndRefresh();
+    }
+
+    function completeOrder(orderId) {
+        const mail = prompt("Enter Gmail Address:");
+        const pass = prompt("Enter Password:");
+        
+        orders = orders.map(o => {
+            if(o.id === orderId) {
+                return { ...o, status: 'Completed', details: `Email: ${mail} | Pass: ${pass}`, timeLeft: 0 };
+            }
+            return o;
+        });
+        saveAndRefresh();
+    }
+
+    function saveAndRefresh() {
+        localStorage.setItem('orders', JSON.stringify(orders));
+        renderOrders();
+    }
+
+    function renderOrders() {
+        // User Side
+        const userDiv = document.getElementById('my-orders');
+        const myOrders = orders.filter(o => o.user === currentUser);
+        userDiv.innerHTML = myOrders.map(o => `
+            <div style="border:1px solid #eee; padding:10px; margin-bottom:5px;">
+                Order ID: ${o.id} <br>
+                Status: <span class="status-${o.status.toLowerCase()}">${o.status}</span> <br>
+                Data: <b>${o.details}</b>
+            </div>
+        `).join('');
+
+        // Admin Side
+        const adminDiv = document.getElementById('admin-orders');
+        adminDiv.innerHTML = orders.filter(o => o.status === 'Pending').map(o => `
+            <div style="background:#fff9e6; padding:10px; margin-bottom:5px;">
+                User: ${o.user} | Time: ${o.createdAt}
+                <button style="background:green;" onclick="completeOrder(${o.id})">Complete Order</button>
+            </div>
+        `).join('');
+    }
+</script>
+
+</body>
+</html>
