@@ -3,97 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Touch Flash On/Off</title>
+    <title>Real SpeedTest Pro</title>
     <style>
+        :root {
+            --primary: #00e5ff;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+        }
+
         body {
-            background-color: #121212;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
+            justify-content: center;
+            min-height: 100vh;
             margin: 0;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        #flashBtn {
-            width: 180px;
-            height: 180px;
+
+        .container {
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Meter Circle */
+        .meter-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 30px;
+            background: conic-gradient(var(--primary) 0%, #334155 0%);
             border-radius: 50%;
-            background: #333;
-            border: 5px solid #444;
-            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+            transition: background 0.2s;
+        }
+
+        .meter-inner {
+            width: 220px;
+            height: 220px;
+            background-color: var(--bg-color);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .speed-val {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .speed-unit {
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+
+        /* Stats Grid */
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        .label { font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px; }
+        .val { font-size: 1.2rem; font-weight: bold; }
+
+        /* Button */
+        .btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 50px;
             font-weight: bold;
-            color: white;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+            transition: transform 0.2s;
         }
-        /* Flash එක On වූ විට පෙනුම */
-        .on {
-            background: radial-gradient(circle, #fff 0%, #ffcc00 100%) !important;
-            color: #000 !important;
-            box-shadow: 0 0 50px #ffcc00 !important;
-            border-color: #fff !important;
-        }
-        #status {
-            margin-top: 25px;
-            font-size: 16px;
-            letter-spacing: 1px;
-        }
+
+        .btn:active { transform: scale(0.95); }
+        .btn:disabled { opacity: 0.5; cursor: wait; }
+
+        .status { margin-top: 15px; color: var(--primary); font-size: 0.9rem; min-height: 20px;}
+
     </style>
 </head>
 <body>
 
-    <button id="flashBtn">OFF</button>
-    <div id="status">Touch to Start</div>
+    <div class="container">
+        <h1>Real Speed<span style="color:var(--primary)">Test</span></h1>
+
+        <div class="meter-container" id="meter">
+            <div class="meter-inner">
+                <span class="speed-val" id="display-speed">0.0</span>
+                <span class="speed-unit">Mbps</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <span class="label">PING</span>
+                <span class="val" id="ping-val">--</span> <span style="font-size:0.8rem">ms</span>
+            </div>
+            <div class="stat-box">
+                <span class="label">DOWNLOAD</span>
+                <span class="val" id="dl-val">--</span> <span style="font-size:0.8rem">Mbps</span>
+            </div>
+        </div>
+
+        <button class="btn" id="start-btn" onclick="startCheck()">START TEST</button>
+        <div class="status" id="status-text"></div>
+    </div>
 
     <script>
-        let track = null;
-        let isFlashOn = false;
-        const btn = document.getElementById('flashBtn');
-        const statusText = document.getElementById('status');
+        // Real Image Source for Download Test (Wikipedia High Res Image ~5MB)
+        // Using a random query param avoids caching
+        const testImage = "https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg";
+        const testSize = 5245329 * 8; // Size in bits (approx 5MB converted to bits)
 
-        btn.addEventListener('click', async () => {
+        const displaySpeed = document.getElementById('display-speed');
+        const meter = document.getElementById('meter');
+        const pingDisplay = document.getElementById('ping-val');
+        const dlDisplay = document.getElementById('dl-val');
+        const statusText = document.getElementById('status-text');
+        const btn = document.getElementById('start-btn');
+
+        function startCheck() {
+            btn.disabled = true;
+            statusText.innerText = "Initializing...";
+            
+            // Reset
+            displaySpeed.innerText = "0.0";
+            pingDisplay.innerText = "--";
+            dlDisplay.innerText = "--";
+            updateMeter(0);
+
+            checkPing();
+        }
+
+        // 1. Real Ping Test
+        async function checkPing() {
+            statusText.innerText = "Checking Ping...";
+            const start = performance.now();
+            
             try {
-                if (!isFlashOn) {
-                    // Flash එක On කිරීමේ පියවර
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: 'environment' }
-                    });
-                    
-                    track = stream.getVideoTracks()[0];
-                    
-                    // Flash එකට සහය දක්වනවාදැයි බැලීම
-                    const imageCapture = new ImageCapture(track);
-                    const photoCapabilities = await imageCapture.getPhotoCapabilities();
-
-                    await track.applyConstraints({
-                        advanced: [{ torch: true }]
-                    });
-
-                    isFlashOn = true;
-                    btn.innerText = "ON";
-                    btn.classList.add('on');
-                    statusText.innerText = "Flash is ON";
-                } else {
-                    // Flash එක Off කිරීමේ පියවර
-                    await track.applyConstraints({
-                        advanced: [{ torch: false }]
-                    });
-                    track.stop(); // කැමරාව ක්‍රියාවිරහිත කිරීම
-                    
-                    isFlashOn = false;
-                    btn.innerText = "OFF";
-                    btn.classList.remove('on');
-                    statusText.innerText = "Flash is OFF";
-                }
-            } catch (err) {
-                console.error(err);
-                alert("වැඩ කරන්නේ නැත. කරුණාකර HTTPS වෙබ් අඩවියක් භාවිතා කරන්න සහ Camera Permission ලබා දෙන්න.");
-                statusText.innerText = "Error occurred.";
+                // Fetching a tiny file from a fast CDN
+                await fetch('https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js?t=' + Math.random(), { mode: 'no-cors' });
+                const end = performance.now();
+                const ping = Math.round(end - start);
+                
+                pingDisplay.innerText = ping;
+                checkDownload(); // Next step
+            } catch (e) {
+                pingDisplay.innerText = "Err";
+                checkDownload();
             }
-        });
+        }
+
+        // 2. Real Download Test
+        function checkDownload() {
+            statusText.innerText = "Testing Download Speed...";
+            
+            const startTime = (new Date()).getTime();
+            const downloadSrc = new Image();
+            
+            // Adding random parameter to prevent browser caching
+            downloadSrc.src = testImage + "?n=" + Math.random();
+            
+            downloadSrc.onload = function () {
+                const endTime = (new Date()).getTime();
+                const duration = (endTime - startTime) / 1000; // in seconds
+                
+                // Calculate Speed: Bits / Seconds = bps
+                // Convert bps to Mbps (bits / 1024 / 1024)
+                const bitsLoaded = testSize; 
+                const speedBps = bitsLoaded / duration;
+                const speedMbps = (speedBps / (1024 * 1024)).toFixed(2);
+                
+                updateMeter(speedMbps);
+                displaySpeed.innerText = speedMbps;
+                dlDisplay.innerText = speedMbps;
+                
+                finishTest();
+            };
+
+            downloadSrc.onerror = function() {
+                statusText.innerText = "Download Error (Check Internet)";
+                btn.disabled = false;
+            };
+
+            // Fake progress while waiting for real onload (just for visual effect)
+            let fakeVal = 0;
+            const progressInterval = setInterval(() => {
+                if(dlDisplay.innerText !== "--") {
+                    clearInterval(progressInterval);
+                    return;
+                }
+                fakeVal += Math.random() * 2;
+                if(fakeVal > 15) fakeVal = 15; // Cap fake loading
+                updateMeter(fakeVal);
+                displaySpeed.innerText = fakeVal.toFixed(1);
+            }, 200);
+        }
+
+        function updateMeter(val) {
+            // Visual circle fill logic
+            // Max speed assume 100Mbps for visual
+            let percent = (val / 100) * 100;
+            if(percent > 100) percent = 100;
+            meter.style.background = `conic-gradient(var(--primary) ${percent}%, #334155 ${percent}%)`;
+        }
+
+        function finishTest() {
+            statusText.innerText = "Test Completed!";
+            btn.disabled = false;
+            btn.innerText = "TEST AGAIN";
+        }
+
     </script>
 </body>
 </html>
