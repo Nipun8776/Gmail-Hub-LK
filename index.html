@@ -3,248 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real SpeedTest Pro</title>
+    <title>Worker Dashboard - Gmail Farming</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --primary: #00e5ff;
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-color: #f8fafc;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 450px;
-            text-align: center;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        /* Meter Circle */
-        .meter-container {
-            position: relative;
-            width: 250px;
-            height: 250px;
-            margin: 0 auto 30px;
-            background: conic-gradient(var(--primary) 0%, #334155 0%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
-            transition: background 0.2s;
-        }
-
-        .meter-inner {
-            width: 220px;
-            height: 220px;
-            background-color: var(--bg-color);
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 2;
-        }
-
-        .speed-val {
-            font-size: 3.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .speed-unit {
-            font-size: 1rem;
-            color: #94a3b8;
-        }
-
-        /* Stats Grid */
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .stat-box {
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid #334155;
-        }
-
-        .label { font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px; }
-        .val { font-size: 1.2rem; font-weight: bold; }
-
-        /* Button */
-        .btn {
-            background: var(--primary);
-            color: #000;
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            border-radius: 50px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-            transition: transform 0.2s;
-        }
-
-        .btn:active { transform: scale(0.95); }
-        .btn:disabled { opacity: 0.5; cursor: wait; }
-
-        .status { margin-top: 15px; color: var(--primary); font-size: 0.9rem; min-height: 20px;}
-
+        .glass-card { background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen">
 
-    <div class="container">
-        <h1>Real Speed<span style="color:var(--primary)">Test</span></h1>
-
-        <div class="meter-container" id="meter">
-            <div class="meter-inner">
-                <span class="speed-val" id="display-speed">0.0</span>
-                <span class="speed-unit">Mbps</span>
+    <div class="bg-indigo-700 text-white p-6 pb-20 rounded-b-[40px] shadow-lg">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div>
+                <h1 id="workerName" class="text-2xl font-black">ආයුබෝවන්!</h1>
+                <p id="workerTG" class="text-indigo-200 text-sm font-mono">ID: Not Linked</p>
+            </div>
+            <div class="bg-indigo-600 p-3 rounded-full border-2 border-indigo-400">
+                <i class="fa-solid fa-user-ninja text-xl"></i>
             </div>
         </div>
-
-        <div class="stats">
-            <div class="stat-box">
-                <span class="label">PING</span>
-                <span class="val" id="ping-val">--</span> <span style="font-size:0.8rem">ms</span>
-            </div>
-            <div class="stat-box">
-                <span class="label">DOWNLOAD</span>
-                <span class="val" id="dl-val">--</span> <span style="font-size:0.8rem">Mbps</span>
-            </div>
-        </div>
-
-        <button class="btn" id="start-btn" onclick="startCheck()">START TEST</button>
-        <div class="status" id="status-text"></div>
     </div>
 
+    <div class="max-w-md mx-auto px-4 -mt-14">
+        
+        <div class="glass-card p-6 mb-6 flex justify-around text-center border border-white">
+            <div>
+                <p class="text-xs text-gray-400 uppercase font-bold">Earnings</p>
+                <p id="balance" class="text-2xl font-black text-indigo-600">$0.00</p>
+            </div>
+            <div class="border-l border-gray-100 h-10 my-auto"></div>
+            <div>
+                <p class="text-xs text-gray-400 uppercase font-bold">Completed</p>
+                <p id="jobCount" class="text-2xl font-black text-gray-800">0</p>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-black text-gray-800 uppercase text-sm tracking-widest">Available Jobs</h2>
+            <button onclick="fetchJobs()" class="text-indigo-600 text-sm font-bold"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+
+        <div id="jobList" class="space-y-4">
+            <div class="text-center py-10 text-gray-400">Loading jobs...</div>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-around shadow-2xl">
+        <button onclick="login()" class="flex flex-col items-center text-indigo-600">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span class="text-[10px] font-bold">LOGIN</span>
+        </button>
+        <button onclick="fetchJobs()" class="flex flex-col items-center text-gray-400">
+            <i class="fa-solid fa-briefcase"></i>
+            <span class="text-[10px] font-bold">TASKS</span>
+        </button>
+    </nav>
+
     <script>
-        // Real Image Source for Download Test (Wikipedia High Res Image ~5MB)
-        // Using a random query param avoids caching
-        const testImage = "https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg";
-        const testSize = 5245329 * 8; // Size in bits (approx 5MB converted to bits)
+        // --- CONFIG ---
+        const SB_URL = "https://jogxczwwlmonzszejced.supabase.co";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvZ3hjend3bG1vbnpzemVqY2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzODE4MjYsImV4cCI6MjA4NTk1NzgyNn0.Stihr3rX7vWBGuU6lEL5opPW1wdkqnuE0_rnu25Ifr4";
+        const BOT_TOKEN = "8357841292:AAGTtiiGtCcEiKaUFEJ2R3XoqFjnGRAM1VI";
 
-        const displaySpeed = document.getElementById('display-speed');
-        const meter = document.getElementById('meter');
-        const pingDisplay = document.getElementById('ping-val');
-        const dlDisplay = document.getElementById('dl-val');
-        const statusText = document.getElementById('status-text');
-        const btn = document.getElementById('start-btn');
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
+        let currentWorker = localStorage.getItem('workerID') || null;
+        let workerName = localStorage.getItem('workerName') || "User";
 
-        function startCheck() {
-            btn.disabled = true;
-            statusText.innerText = "Initializing...";
-            
-            // Reset
-            displaySpeed.innerText = "0.0";
-            pingDisplay.innerText = "--";
-            dlDisplay.innerText = "--";
-            updateMeter(0);
-
-            checkPing();
-        }
-
-        // 1. Real Ping Test
-        async function checkPing() {
-            statusText.innerText = "Checking Ping...";
-            const start = performance.now();
-            
-            try {
-                // Fetching a tiny file from a fast CDN
-                await fetch('https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js?t=' + Math.random(), { mode: 'no-cors' });
-                const end = performance.now();
-                const ping = Math.round(end - start);
-                
-                pingDisplay.innerText = ping;
-                checkDownload(); // Next step
-            } catch (e) {
-                pingDisplay.innerText = "Err";
-                checkDownload();
+        // --- AUTH SIMULATION ---
+        function login() {
+            const id = prompt("ඔයාගේ Telegram ID එක ඇතුළත් කරන්න:");
+            const name = prompt("ඔයාගේ නම ඇතුළත් කරන්න:");
+            if (id && name) {
+                localStorage.setItem('workerID', id);
+                localStorage.setItem('workerName', name);
+                location.reload();
             }
         }
 
-        // 2. Real Download Test
-        function checkDownload() {
-            statusText.innerText = "Testing Download Speed...";
-            
-            const startTime = (new Date()).getTime();
-            const downloadSrc = new Image();
-            
-            // Adding random parameter to prevent browser caching
-            downloadSrc.src = testImage + "?n=" + Math.random();
-            
-            downloadSrc.onload = function () {
-                const endTime = (new Date()).getTime();
-                const duration = (endTime - startTime) / 1000; // in seconds
-                
-                // Calculate Speed: Bits / Seconds = bps
-                // Convert bps to Mbps (bits / 1024 / 1024)
-                const bitsLoaded = testSize; 
-                const speedBps = bitsLoaded / duration;
-                const speedMbps = (speedBps / (1024 * 1024)).toFixed(2);
-                
-                updateMeter(speedMbps);
-                displaySpeed.innerText = speedMbps;
-                dlDisplay.innerText = speedMbps;
-                
-                finishTest();
-            };
-
-            downloadSrc.onerror = function() {
-                statusText.innerText = "Download Error (Check Internet)";
-                btn.disabled = false;
-            };
-
-            // Fake progress while waiting for real onload (just for visual effect)
-            let fakeVal = 0;
-            const progressInterval = setInterval(() => {
-                if(dlDisplay.innerText !== "--") {
-                    clearInterval(progressInterval);
-                    return;
-                }
-                fakeVal += Math.random() * 2;
-                if(fakeVal > 15) fakeVal = 15; // Cap fake loading
-                updateMeter(fakeVal);
-                displaySpeed.innerText = fakeVal.toFixed(1);
-            }, 200);
+        function updateProfileUI() {
+            if (currentWorker) {
+                document.getElementById('workerTG').innerText = `ID: ${currentWorker}`;
+                document.getElementById('workerName').innerText = `ආයුබෝවන්, ${workerName}!`;
+                fetchStats();
+            }
         }
 
-        function updateMeter(val) {
-            // Visual circle fill logic
-            // Max speed assume 100Mbps for visual
-            let percent = (val / 100) * 100;
-            if(percent > 100) percent = 100;
-            meter.style.background = `conic-gradient(var(--primary) ${percent}%, #334155 ${percent}%)`;
+        // --- FETCH STATS ---
+        async function fetchStats() {
+            const { data: workerData } = await supabase.from('workers').select('*').eq('telegram_id', currentWorker).single();
+            if (workerData) {
+                document.getElementById('balance').innerText = `$${workerData.balance.toFixed(2)}`;
+                const { count } = await supabase.from('gmail_jobs').select('*', { count: 'exact', head: true }).eq('worker_id', currentWorker).eq('status', 'approved');
+                document.getElementById('jobCount').innerText = count || 0;
+            }
         }
 
-        function finishTest() {
-            statusText.innerText = "Test Completed!";
-            btn.disabled = false;
-            btn.innerText = "TEST AGAIN";
+        // --- FETCH JOBS ---
+        async function fetchJobs() {
+            const { data: jobs, error } = await supabase.from('available_jobs_view').select('*');
+            const container = document.getElementById('jobList');
+            container.innerHTML = "";
+
+            if (!jobs || jobs.length === 0) {
+                container.innerHTML = '<div class="text-center py-10 text-gray-400">දැනට වැඩ නැත. පසුව බලන්න.</div>';
+                return;
+            }
+
+            jobs.forEach(job => {
+                container.innerHTML += `
+                    <div class="glass-card p-5 border-l-8 border-indigo-500 flex justify-between items-center transition active:scale-95">
+                        <div>
+                            <p class="text-xs font-black text-gray-400 uppercase tracking-tighter">${job.first_name} ${job.last_name}</p>
+                            <p class="font-mono font-bold text-gray-700">${job.email.substring(0, 15)}...</p>
+                            <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">REWARD: $${job.price}</span>
+                        </div>
+                        <button onclick="claimJob('${job.id}', '${job.email}')" class="bg-indigo-600 text-white text-xs font-black px-4 py-2 rounded-xl shadow-lg shadow-indigo-200 uppercase">Claim</button>
+                    </div>
+                `;
+            });
         }
 
+        // --- CLAIM JOB ---
+        async function claimJob(id, email) {
+            if (!currentWorker) return alert("කරුණාකර මුලින්ම Login වන්න!");
+
+            const { error } = await supabase.from('gmail_jobs').update({
+                status: 'pending',
+                worker_id: currentWorker,
+                assigned_at: new Date()
+            }).eq('id', id);
+
+            if (!error) {
+                alert(`වැඩේ භාරගත්තා!\nEmail: ${email}\nඔයාට විනාඩි 15ක් තියෙනවා.`);
+                notifyAdmin(`🏃 *Job Claimed!*\nWorker: ${workerName}\nEmail: \`${email}\``);
+                fetchJobs();
+                fetchStats();
+            } else {
+                alert("වැඩේ ලබා ගැනීමට නොහැක. වෙනත් කෙනෙක් ලබාගෙන ඇත.");
+            }
+        }
+
+        async function notifyAdmin(msg) {
+            // මෙතනට ඔයාගේ Admin Chat ID එක දාන්න (Notification ලැබෙන්න ඕන තැන)
+            const ADMIN_CHAT_ID = "6124458925"; 
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${ADMIN_CHAT_ID}&text=${encodeURIComponent(msg)}&parse_mode=Markdown`);
+        }
+
+        // Init
+        updateProfileUI();
+        fetchJobs();
     </script>
 </body>
 </html>
