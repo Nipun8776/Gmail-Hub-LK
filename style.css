@@ -1,0 +1,24 @@
+/* Base Styles for Mobile Optimization */
+body { 
+    font-family: 'Inter', sans-serif; 
+    touch-action: manipulation; 
+    -webkit-tap-highlight-color: transparent; 
+}
+
+.fade-in { animation: fadeIn 0.3s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Custom Scrollbar for Lists */
+.task-list::-webkit-scrollbar { width: 6px; }
+.task-list::-webkit-scrollbar-track { background: transparent; }
+.task-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+
+/* Hide scrollbar for horizontal nav but allow scroll */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Ensure no horizontal scrolling on page */
+html, body {
+    overflow-x: hidden;
+    width: 100%;
+}
