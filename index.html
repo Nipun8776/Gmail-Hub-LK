@@ -1,126 +1,247 @@
 <!DOCTYPE html>
-<html lang="si">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>G-Stock Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Gmail Hub LK 🇱🇰</title>
     
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* Base Styles for Mobile Optimization */
-        body { 
-            font-family: 'Inter', sans-serif; 
-            touch-action: manipulation; 
-            -webkit-tap-highlight-color: transparent; 
-        }
-        
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .fade-in { animation: fadeIn 0.2s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* Custom Scrollbar for Lists */
-        .task-list::-webkit-scrollbar { width: 6px; }
-        .task-list::-webkit-scrollbar-track { background: transparent; }
-        .task-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-        
-        /* Hide scrollbar for horizontal nav but allow scroll */
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Ensure no horizontal scrolling on page */
-        html, body {
-            overflow-x: hidden;
-            width: 100%;
-        }
+        html { overflow-x: hidden; width: 100%; }
+        
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 100; display: none; justify-content: center; align-items: center; }
+        #confirm-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(2px); }
+        .sticky-header { position: sticky; top: 60px; z-index: 40; background-color: #f3f4f6; padding-bottom: 10px; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col overflow-x-hidden">
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-    <!-- Navigation Bar -->
-    <nav class="bg-slate-900 text-white p-3 shadow-lg sticky top-0 z-50">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
-            <div class="flex items-center gap-2">
-                <i class="fa-solid fa-robot text-blue-400 text-xl"></i>
-                <h1 class="text-lg font-bold">G-Farmer Manager</h1>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay"><div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div></div>
+
+    <!-- Dynamic Confirmation Modal -->
+    <div id="confirm-modal" class="hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center fade-in border border-gray-100 transform transition-all scale-100 relative overflow-hidden">
+            <!-- Dynamic Top Line -->
+            <div id="modal-top-line" class="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
+            
+            <div id="modal-icon-bg" class="mb-5 bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-sm transition-colors">
+                <i id="modal-icon" class="fa-solid fa-circle-question text-4xl text-blue-600"></i>
             </div>
-            <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="flex-1 md:flex-none px-3 py-2 bg-blue-600 rounded-lg transition font-medium text-xs md:text-sm text-center whitespace-nowrap">Dashboard</button>
-                <button onclick="switchTab('qc')" id="btn-qc" class="flex-1 md:flex-none px-3 py-2 text-gray-300 hover:bg-slate-800 rounded-lg transition font-medium text-xs md:text-sm border border-slate-700 text-center whitespace-nowrap">QC Check</button>
-                <button onclick="switchTab('payments')" id="btn-payments" class="flex-1 md:flex-none px-3 py-2 text-gray-300 hover:bg-slate-800 rounded-lg transition font-medium text-xs md:text-sm border border-slate-700 text-center whitespace-nowrap"><i class="fa-solid fa-wallet mr-1"></i> Payments</button>
-                <button onclick="switchTab('stock')" id="btn-stock" class="flex-1 md:flex-none px-3 py-2 text-gray-300 hover:bg-slate-800 rounded-lg transition font-medium text-xs md:text-sm text-center whitespace-nowrap">Stock</button>
+            
+            <h3 class="text-xl font-bold text-gray-800 mb-2" id="modal-title">Confirm Action</h3>
+            <p class="text-gray-500 text-sm mb-6 leading-relaxed" id="modal-desc">
+                Are you sure you want to proceed?
+            </p>
+            
+            <div class="flex gap-3">
+                <button id="modal-btn-cancel" class="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl active:scale-95 transition text-sm">Cancel</button>
+                <button id="modal-btn-yes" class="flex-1 py-3 text-white font-bold rounded-xl shadow-lg active:scale-95 transition text-sm">Confirm</button>
+            </div>
+        </div>
+    </div><!-- Navbar (Clean Center Title) -->
+    <nav class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <!-- Centered Title -->
+            <div class="flex justify-center items-center mb-3">
+                <h1 class="text-xl font-bold tracking-widest text-center uppercase">Gmail Hub LK 🇱🇰</h1>
+            </div>
+            
+            <!-- Scrollable Menu -->
+            <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar w-full justify-start md:justify-center">
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn bg-blue-600 text-white min-w-[100px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-md">Dashboard</button>
+                <button onclick="switchTab('qc')" id="btn-qc" class="nav-btn text-gray-400 hover:bg-slate-800 min-w-[90px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 border border-slate-700">QC Check</button>
+                <button onclick="switchTab('payments')" id="btn-payments" class="nav-btn text-gray-400 hover:bg-slate-800 min-w-[90px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 border border-slate-700">Payments</button>
+                <button onclick="switchTab('issues')" id="btn-issues" class="nav-btn text-gray-400 hover:bg-slate-800 min-w-[90px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 border border-slate-700">Issues</button>
+                <button onclick="switchTab('stock')" id="btn-stock" class="nav-btn text-gray-400 hover:bg-slate-800 min-w-[90px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 border border-slate-700">Stock</button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content Area -->
-    <main class="container mx-auto p-3 md:p-6 flex-1 flex flex-col">
-
-        <!-- DASHBOARD VIEW -->
-        <div id="view-dashboard" class="fade-in flex flex-col h-full md:h-[calc(100vh-100px)]">
-            <div class="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4 shrink-0">
-                <div class="bg-white p-2 rounded-lg shadow border-l-4 border-blue-500"><p class="text-gray-400 text-[9px] uppercase font-bold">Stock</p><h2 class="text-lg font-bold text-gray-800" id="stat-available">0</h2></div>
-                <div class="bg-white p-2 rounded-lg shadow border-l-4 border-yellow-500"><p class="text-gray-400 text-[9px] uppercase font-bold">Work</p><h2 class="text-lg font-bold text-gray-800" id="stat-progress">0</h2></div>
-                <div class="bg-white p-2 rounded-lg shadow border-l-4 border-green-500"><p class="text-gray-400 text-[9px] uppercase font-bold">To QC</p><h2 class="text-lg font-bold text-gray-800" id="stat-completed">0</h2></div>
-                <div class="bg-white p-2 rounded-lg shadow border-l-4 border-emerald-500"><p class="text-gray-400 text-[9px] uppercase font-bold">Verified</p><h2 class="text-lg font-bold text-emerald-600" id="stat-verified">0</h2></div>
-                <div class="bg-white p-2 rounded-lg shadow border-l-4 border-indigo-500"><p class="text-gray-400 text-[9px] uppercase font-bold">Paid</p><h2 class="text-lg font-bold text-indigo-600" id="stat-paid">0</h2></div>
-                <div class="bg-white p-2 rounded-lg shadow border-l-4 border-red-500"><p class="text-gray-400 text-[9px] uppercase font-bold">Issues</p><h2 class="text-lg font-bold text-red-600" id="stat-issues">0</h2></div>
-            </div>
-
-            <div class="flex flex-col md:flex-row gap-4 h-full md:overflow-hidden">
-                <div class="md:w-1/3 flex flex-col gap-4 shrink-0 md:overflow-y-auto">
-                    <div class="bg-white p-4 rounded-xl shadow text-center">
-                        <div class="mb-2 bg-blue-50 p-3 rounded-full w-12 h-12 mx-auto flex items-center justify-center"><i class="fa-solid fa-cloud-arrow-down text-2xl text-blue-600"></i></div>
-                        <h3 class="text-base font-bold text-gray-800 mb-2">Request Account</h3>
-                        <button onclick="getNewAccount()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md active:bg-blue-800 active:scale-95 transition-all flex items-center justify-center gap-2"><i class="fa-solid fa-plus"></i> GET NEW EMAIL</button>
-                        <p id="error-msg" class="text-red-500 text-xs mt-2 hidden font-bold bg-red-50 py-1 px-2 rounded">No stock available!</p>
-                    </div>
-                    <div class="bg-white p-3 rounded-xl shadow border border-gray-100 md:flex-1 min-h-[150px]">
-                        <h4 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Recent Activity</h4>
-                        <div id="recent-activity-list" class="space-y-2 overflow-y-auto max-h-[250px] md:max-h-none"><p class="text-gray-400 text-center text-xs py-4">No recent activity</p></div>
-                    </div>
-                </div>
-                <div class="md:w-2/3 flex flex-col h-full bg-gray-50/50 rounded-xl border border-gray-200 p-2 md:overflow-hidden">
-                    <div class="flex justify-between items-center px-2 mb-2"><h3 class="font-bold text-gray-700 text-sm">Active Tasks</h3><span class="text-[10px] text-gray-500 bg-gray-200 px-2 py-1 rounded-full" id="active-count">0 Active</span></div>
-                    <div id="active-tasks-container" class="task-list space-y-3 pb-20 md:pb-2 md:overflow-y-auto flex-1"></div>
-                </div>
+    <main class="container mx-auto p-3 md:p-6 flex-1 flex flex-col max-w-7xl">
+        
+        <!-- Controls Row (Search Only - Filter Removed) -->
+        <div class="sticky-header pt-2 pb-2">
+            <div class="relative shadow-sm">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fa-solid fa-search text-gray-400"></i></span>
+                <input type="text" id="global-search" onkeyup="handleSearch()" placeholder="Search #ID or Email..." class="w-full py-3 pl-10 pr-10 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                <button onclick="clearSearch()" id="clear-search-btn" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-red-500 hidden transition"><i class="fa-solid fa-circle-xmark text-lg"></i></button>
             </div>
         </div>
-        <!-- QC VIEW -->
+
+        <div id="view-search" class="hidden fade-in pb-10">
+            <div class="flex items-center justify-between border-b pb-2 mb-4"><h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest">Search Results</h3><span id="search-count" class="bg-gray-200 text-gray-600 py-0.5 px-2 rounded text-xs font-bold">0</span></div>
+            <div id="search-results-container" class="space-y-3"></div>
+        </div><!-- DASHBOARD -->
+        <div id="view-dashboard" class="fade-in flex flex-col h-full">
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6 shrink-0">
+                <div class="bg-white p-3 rounded-xl shadow-sm border-b-4 border-blue-500"><p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide">Stock</p><h2 class="text-xl font-bold text-gray-800" id="stat-available">0</h2></div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-b-4 border-yellow-500"><p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide">Work</p><h2 class="text-xl font-bold text-gray-800" id="stat-progress">0</h2></div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-b-4 border-green-500"><p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide">To QC</p><h2 class="text-xl font-bold text-gray-800" id="stat-completed">0</h2></div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-b-4 border-emerald-500"><p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide">Verified</p><h2 class="text-xl font-bold text-emerald-600" id="stat-verified">0</h2></div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-b-4 border-indigo-500"><p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide">Paid</p><h2 class="text-xl font-bold text-indigo-600" id="stat-paid">0</h2></div>
+                <div class="bg-white p-3 rounded-xl shadow-sm border-b-4 border-red-500"><p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide">Issues</p><h2 class="text-xl font-bold text-red-600" id="stat-issues">0</h2></div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-6 h-full">
+                <!-- Left Panel -->
+                <div class="md:w-1/3 flex flex-col gap-5">
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-blue-50 text-center relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+                        <!-- Cloud Icon -->
+                        <div class="mb-4 bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-blue-600 shadow-sm">
+                            <i class="fa-solid fa-cloud-arrow-down text-3xl"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Request Account</h3>
+                        <!-- Direct Action for Get New Email (No Confirm), Auto Scroll -->
+                        <button onclick="getNewAccount()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-wide text-sm">
+                            <i class="fa-solid fa-plus-circle"></i> Get New Email
+                        </button>
+                        <p id="error-msg" class="text-red-500 text-xs mt-3 hidden font-bold bg-red-100 py-1 px-3 rounded-lg inline-block">NO STOCK AVAILABLE!</p>
+                    </div>
+
+                    <!-- Earnings (Updated Logic) -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                        <h4 class="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><i class="fa-solid fa-coins text-yellow-500"></i> Earnings</h4>
+                        <div class="flex items-center gap-2 mb-4 bg-gray-50 p-2 rounded border border-gray-200">
+                            <label class="text-[10px] font-bold text-gray-500 whitespace-nowrap">1 USD = </label>
+                            <input type="number" id="usd-rate" value="300" onchange="saveSettings()" class="w-16 bg-white border border-gray-300 rounded px-1 text-xs font-bold text-right focus:outline-none focus:border-blue-500">
+                            <span class="text-[10px] font-bold text-gray-500">LKR</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-500 font-medium">Revenue ($0.25/acc)</span>
+                                <div class="text-right">
+                                    <div class="font-bold text-gray-800" id="fin-revenue-usd">$0.00</div>
+                                    <div class="text-[10px] text-gray-400 font-mono" id="fin-revenue-lkr">Rs. 0</div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-500 font-medium">Worker (Rs.40/acc)</span>
+                                <div class="text-right">
+                                    <div class="font-bold text-red-500" id="fin-cost-usd">-$0.00</div>
+                                    <div class="text-[10px] text-red-300 font-mono" id="fin-cost-lkr">Rs. 0</div>
+                                </div>
+                            </div>
+                            <hr class="border-dashed border-gray-200">
+                            <div class="flex justify-between items-center bg-green-50 p-3 rounded-xl border border-green-100 mt-2">
+                                <span class="text-green-800 font-bold text-xs uppercase tracking-wider">Net Profit</span>
+                                <div class="text-right">
+                                    <div class="font-bold text-green-700 text-sm" id="fin-profit-usd">$0.00</div>
+                                    <div class="font-bold text-green-600 text-[10px] font-mono" id="fin-profit-lkr">Rs. 0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="confirmRun('This will delete all data. Are you sure?', triggerReset, 'danger')" class="w-full bg-white border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 font-bold py-3 rounded-xl shadow-sm transition active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-widest mt-2">
+                        <i class="fa-solid fa-trash-can"></i> Reset All Data
+                    </button>
+                </div>
+                
+                <!-- Right Panel: Active Tasks -->
+                <div class="md:w-2/3 flex flex-col bg-slate-50 rounded-2xl border border-gray-200 p-3 overflow-hidden shadow-inner">
+                    <div class="flex justify-between items-center px-2 mb-3">
+                        <h3 class="font-bold text-gray-700 text-sm uppercase tracking-tight flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-blue-500"></i> Active Tasks
+                        </h3>
+                        <span class="text-[10px] text-white bg-slate-400 px-2 py-1 rounded-full font-bold shadow-sm" id="active-count">0 Active</span>
+                    </div>
+                    <div id="active-tasks-container" class="task-list space-y-3 pb-20 md:pb-5 overflow-y-auto h-full pr-1"></div>
+                </div>
+            </div>
+        </div><!-- QC VIEW -->
         <div id="view-qc" class="hidden fade-in pb-10">
-            <div class="max-w-5xl mx-auto">
-                <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold text-gray-800">Quality Check</h2><span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded-full">Pending Only</span></div>
-                <div class="space-y-3" id="qc-list-container"></div>
+            <div class="max-w-4xl mx-auto">
+                <div class="flex justify-between items-end mb-6 border-b pb-4">
+                    <div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Quality Check</h2><p class="text-xs text-gray-500 uppercase tracking-wide mt-1">Verify completed accounts</p></div>
+                    <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Pending</span>
+                </div>
+                <div id="qc-list-container" class="space-y-4"></div>
             </div>
         </div>
 
         <!-- PAYMENTS VIEW -->
         <div id="view-payments" class="hidden fade-in pb-10">
-            <div class="max-w-5xl mx-auto">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><div class="flex items-center gap-2 mb-4"><div class="bg-orange-100 p-2 rounded-full text-orange-600"><i class="fa-solid fa-hourglass-half"></i></div><h2 class="text-lg font-bold text-gray-800">Pending Payment</h2></div><div id="payment-pending-list" class="space-y-3"></div></div>
-                    <div><div class="flex items-center gap-2 mb-4"><div class="bg-green-100 p-2 rounded-full text-green-600"><i class="fa-solid fa-check-double"></i></div><h2 class="text-lg font-bold text-gray-800">Paid History</h2></div><div id="payment-paid-list" class="space-y-3 opacity-80"></div></div>
+            <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Pending -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-orange-100">
+                    <div class="flex justify-between items-center mb-6 pb-2 border-b border-orange-100">
+                        <h2 class="text-lg font-bold text-orange-600 uppercase tracking-tight flex items-center gap-2">
+                            <i class="fa-solid fa-clock"></i> Pending Pay
+                        </h2>
+                        <button onclick="confirmRun('Copy list?', () => copyEmailList('pending'), 'info')" class="text-[10px] bg-orange-50 border border-orange-200 text-orange-700 px-3 py-1.5 rounded-lg font-bold hover:bg-orange-100 active:scale-95 transition">Copy List</button>
+                    </div>
+                    <div id="payment-pending-list" class="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar"></div>
                 </div>
+                <!-- Paid -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-green-100">
+                    <div class="flex justify-between items-center mb-6 pb-2 border-b border-green-100">
+                        <h2 class="text-lg font-bold text-green-600 uppercase tracking-tight flex items-center gap-2">
+                            <i class="fa-solid fa-check-double"></i> Paid History
+                        </h2>
+                        <button onclick="confirmRun('Copy list?', () => copyEmailList('paid'), 'info')" class="text-[10px] bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg font-bold hover:bg-green-100 active:scale-95 transition">Copy List</button>
+                    </div>
+                    <div id="payment-paid-list" class="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ISSUES VIEW -->
+        <div id="view-issues" class="hidden fade-in pb-10">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex justify-between items-end mb-6 border-b border-red-100 pb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Issues</h2>
+                        <p class="text-xs text-red-500 font-bold uppercase tracking-wide mt-1">Failed / Not Registered</p>
+                    </div>
+                    <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Action Required</span>
+                </div>
+                <div id="issues-list-container" class="space-y-3"></div>
             </div>
         </div>
 
         <!-- STOCK VIEW -->
         <div id="view-stock" class="hidden fade-in pb-10">
-            <div class="max-w-4xl mx-auto">
-                <div class="bg-white rounded-xl shadow-lg p-4 mb-4">
-                    <h2 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2">Bulk Upload Stock</h2>
-                    <div class="mb-3"><textarea id="bulk-input" rows="6" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-xs" placeholder="Paste bot output here..."></textarea></div>
-                    <button onclick="processBulkUpload()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-lg transition active:scale-95"><i class="fa-solid fa-upload mr-2"></i> Process & Add</button>
-                    <p id="upload-status" class="text-center text-xs mt-2 text-gray-500"></p>
+            <div class="max-w-5xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-lg p-5 mb-8 border border-slate-200 border-t-4 border-slate-800">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 uppercase tracking-wide flex items-center gap-2"><i class="fa-solid fa-upload"></i> Bulk Upload</h2>
+                    <textarea id="bulk-input" rows="5" class="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-xs mb-4 bg-slate-50 transition" placeholder="Paste First name, Email, and Password lines here..."></textarea>
+                    <button onclick="confirmRun('Process this stock batch?', processBulkUpload, 'info')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl transition active:scale-95 shadow-lg shadow-slate-200 uppercase tracking-widest text-sm">Process & Add Stock</button>
                 </div>
-                <div class="bg-white rounded-xl shadow overflow-hidden">
-                    <div class="px-4 py-3 border-b bg-gray-50 flex justify-between items-center"><h3 class="font-bold text-gray-700 text-sm">Database</h3><button onclick="clearDatabase()" class="text-[10px] text-red-500 hover:text-red-700 font-bold border border-red-200 px-2 py-1 rounded bg-red-50">CLEAR ALL</button></div>
+                
+                <div class="bg-white rounded-2xl shadow overflow-hidden border border-slate-200">
+                    <div class="px-5 py-4 border-b bg-slate-50 font-bold text-slate-700 text-sm uppercase tracking-wide flex justify-between items-center">
+                        <span>Database Inventory</span>
+                        <span class="text-[10px] bg-white border px-2 py-0.5 rounded text-slate-500">Live</span>
+                    </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left text-gray-500">
-                            <thead class="text-gray-700 uppercase bg-gray-100"><tr><th class="px-4 py-2">ID</th><th class="px-4 py-2">Email</th><th class="px-4 py-2">Status</th><th class="px-4 py-2">Paid</th></tr></thead>
-                            <tbody id="stock-table-body"></tbody>
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-100 text-slate-600 uppercase tracking-wider font-bold">
+                                <tr>
+                                    <th class="px-5 py-3">Visual ID</th>
+                                    <th class="px-5 py-3">Email Identity</th>
+                                    <th class="px-5 py-3">Status</th>
+                                    <th class="px-5 py-3">Date</th>
+                                    <th class="px-5 py-3 text-center">Paid</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-table-body" class="divide-y divide-gray-100 font-medium text-slate-600"></tbody>
                         </table>
                     </div>
                 </div>
@@ -128,409 +249,344 @@
         </div>
     </main>
 
-    <!-- TOAST -->
-    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-50 bg-slate-800 text-white px-6 py-2 rounded-full shadow-xl transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold">Copied!</div>
-
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none text-sm font-bold flex items-center gap-2 border border-slate-700">
+        <i class="fa-solid fa-circle-check text-green-400 text-lg"></i><span id="toast-msg">Copied!</span>
+    </div><!-- JavaScript Logic -->
     <script>
-        // --- 1. DATA MANAGEMENT ---
-        let stockData = JSON.parse(localStorage.getItem('gStockData')) || [];
-        
-        function saveData() {
-            localStorage.setItem('gStockData', JSON.stringify(stockData));
-            updateUI();
+        // CONFIGURATION
+        const SUPABASE_URL = 'https://eeowqtejbpwwvadfsolb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_GAIEmObWY9BcV4ZBNEwM4g_tQhtF7KY';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let stockData = [];
+        let activeTabId = 'dashboard';
+        let currentUsdRate = 300;
+        let isActivityExpanded = false;
+        let filterDate = null;
+
+        // Initialize App
+        async function initApp() {
+            showLoading(true);
+            await Promise.all([loadData(), loadSettings()]);
+            showLoading(false);
         }
 
-        // --- 2. LOGIC FUNCTIONS ---
-        function processBulkUpload() {
-            const text = document.getElementById('bulk-input').value;
-            if(!text.trim()) { alert("Please paste data first!"); return; }
+        // Live Fetch from Supabase
+        async function loadData() {
+            try {
+                const { data, error } = await supabaseClient.from('g_stock').select('*').order('id', { ascending: true });
+                if (!error) { stockData = data || []; updateUI(); }
+            } catch (err) { console.error('Load Error:', err); }
+        }
 
-            const entries = [];
-            const lines = text.split('\n');
-            let currentEntry = {};
+        // Settings (USD Rate)
+        async function loadSettings() {
+            try {
+                const { data, error } = await supabaseClient.from('app_settings').select('value').eq('key', 'usd_rate').single();
+                if (data) {
+                    currentUsdRate = parseFloat(data.value);
+                    document.getElementById('usd-rate').value = currentUsdRate;
+                }
+            } catch (err) {}
+        }
+
+        async function saveSettings() {
+            const newRate = document.getElementById('usd-rate').value;
+            currentUsdRate = parseFloat(newRate);
+            await supabaseClient.from('app_settings').upsert({ key: 'usd_rate', value: newRate.toString() });
+            updateUI(); 
+        }
+
+        // Subscriptions for Live Updates
+        supabaseClient.channel('public:g_stock').on('postgres_changes', { event: '*', schema: 'public', table: 'g_stock' }, () => loadData()).subscribe();
+
+        // --- HELPERS ---
+        const getVisualID = (realID) => {
+             const sorted = [...stockData].sort((a,b) => a.id - b.id);
+             const index = sorted.findIndex(item => item.id === realID);
+             return index !== -1 ? index + 1 : realID;
+        };
+
+        const getCalendarDate = (dateStr) => {
+            if(!dateStr) return "";
+            const d = new Date(dateStr);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        };
+
+        const getRelativeDateLabel = (dateStr) => {
+            if(!dateStr) return ""; const d = new Date(dateStr); const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+            const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            if (target.getTime() === today.getTime()) return "Today";
+            if (target.getTime() === yesterday.getTime()) return "Yesterday";
+            return target.toISOString().split('T')[0];
+        };
+
+        // --- CONFIRMATION SYSTEM ---
+        let pendingAction = null;
+        function confirmRun(msg, action, type = 'info') {
+            const m = document.getElementById('confirm-modal');
+            const title = document.getElementById('modal-title');
+            const btnYes = document.getElementById('modal-btn-yes');
+            const iconBg = document.getElementById('modal-icon-bg');
+            const icon = document.getElementById('modal-icon');
+            const topLine = document.getElementById('modal-top-line');
+
+            document.getElementById('modal-desc').innerText = msg;
+            
+            if (type === 'danger') {
+                title.innerText = "Warning: Delete Data?";
+                title.className = "text-xl font-bold text-red-600 mb-2";
+                btnYes.className = "flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl active:scale-95 transition shadow-lg shadow-red-200 text-sm";
+                btnYes.innerText = "Yes, Delete";
+                iconBg.className = "mb-5 bg-red-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-sm";
+                icon.className = "fa-solid fa-triangle-exclamation text-4xl text-red-500";
+                topLine.className = "absolute top-0 left-0 w-full h-2 bg-red-500";
+            } else {
+                title.innerText = "Confirm Action";
+                title.className = "text-xl font-bold text-gray-800 mb-2";
+                btnYes.className = "flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl active:scale-95 transition shadow-lg shadow-blue-200 text-sm";
+                btnYes.innerText = "Confirm";
+                iconBg.className = "mb-5 bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-sm";
+                icon.className = "fa-solid fa-circle-question text-4xl text-blue-500";
+                topLine.className = "absolute top-0 left-0 w-full h-2 bg-blue-500";
+            }
+
+            m.style.display = 'flex';
+            pendingAction = action;
+        }
+
+        document.getElementById('modal-btn-yes').onclick = () => {
+            document.getElementById('confirm-modal').style.display = 'none';
+            if (pendingAction) pendingAction();
+        };
+        document.getElementById('modal-btn-cancel').onclick = () => document.getElementById('confirm-modal').style.display = 'none';
+
+        // --- CORE FUNCTIONS ---
+        async function processBulkUpload() {
+            const text = document.getElementById('bulk-input').value; if(!text.trim()) return;
+            const lines = text.split('\n'); let current = {}; let toAdd = [];
+            let duplicates = 0; // Counter for duplicates
 
             lines.forEach(line => {
-                const trimmed = line.trim();
-                if (trimmed.startsWith("First name:")) currentEntry.firstname = trimmed.split(":")[1].trim();
-                if (trimmed.startsWith("Last name:")) currentEntry.lastname = trimmed.split(":")[1].trim();
-                if (trimmed.startsWith("Email:")) currentEntry.email = trimmed.split(":")[1].trim();
-                if (trimmed.startsWith("Password:")) {
-                    currentEntry.pass = trimmed.split(":")[1].trim();
-                    if(currentEntry.email && currentEntry.pass) {
-                        entries.push({...currentEntry});
-                        currentEntry = {}; 
+                const t = line.trim();
+                if (t.toLowerCase().includes("first name")) current.fn = t.split(/:(.+)/)[1].trim();
+                else if (t.toLowerCase().includes("email")) current.em = t.split(/:(.+)/)[1].trim();
+                else if (t.toLowerCase().includes("password")) current.ps = t.split(/:(.+)/)[1].trim();
+                
+                if(current.em && current.ps) {
+                    // DUPLICATE CHECK: Check against existing stockData
+                    if (stockData.some(i => i.email === current.em)) {
+                        duplicates++; 
+                    } else {
+                        // Check if already in toAdd to prevent duplicates within batch
+                        if (!toAdd.some(i => i.email === current.em)) {
+                            toAdd.push({ firstname: current.fn || '', email: current.em, pass: current.ps, status: 'available' });
+                        }
                     }
+                    current = {};
                 }
             });
 
-            if (entries.length === 0) { alert("No valid data found!"); return; }
+            if (duplicates > 0) {
+                showToast(`${duplicates} Duplicates Skipped!`, "orange");
+            }
 
-            let addedCount = 0;
-            let duplicateCount = 0;
-
-            entries.forEach(entry => {
-                const exists = stockData.some(item => item.email === entry.email);
-                if (!exists) {
-                    const newItem = {
-                        id: stockData.length > 0 ? stockData[stockData.length - 1].id + 1 : 1,
-                        firstname: entry.firstname || "",
-                        lastname: entry.lastname || "",
-                        email: entry.email,
-                        pass: entry.pass,
-                        status: 'available',
-                        paid: false,
-                        timestamp: new Date().toISOString()
-                    };
-                    stockData.push(newItem);
-                    addedCount++;
-                } else { duplicateCount++; }
-            });
-
-            saveData();
-            document.getElementById('bulk-input').value = ""; 
-            document.getElementById('upload-status').innerHTML = `Added: <b class="text-green-600">${addedCount}</b> | Duplicates: <b class="text-red-500">${duplicateCount}</b>`;
+            if (toAdd.length > 0) { 
+                showLoading(true); 
+                await supabaseClient.from('g_stock').insert(toAdd); 
+                document.getElementById('bulk-input').value = ""; 
+                showLoading(false); 
+                loadData(); 
+                showToast(`${toAdd.length} Stock Added!`); 
+            } else if (duplicates > 0 && toAdd.length === 0) {
+                // Toast already shown
+            } else {
+                showToast("No valid data found", "red");
+            }
         }
 
-        function getNewAccount() {
-            const account = stockData.find(item => item.status === 'available');
-            if (!account) { 
-                const msg = document.getElementById('error-msg');
-                msg.classList.remove('hidden'); 
-                setTimeout(() => msg.classList.add('hidden'), 3000);
-                return; 
-            }
-            
-            account.status = 'processing';
-            saveData();
-            
+        async function getNewAccount() {
+            const acc = stockData.find(i => i.status === 'available');
+            if (!acc) { document.getElementById('error-msg').classList.remove('hidden'); return; }
+            showLoading(true); await supabaseClient.from('g_stock').update({ status: 'processing', updated_at: new Date().toISOString() }).eq('id', acc.id);
+            showLoading(false); loadData();
             setTimeout(() => {
-                if(window.innerWidth < 768) {
-                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                } else {
-                    const container = document.getElementById('active-tasks-container');
-                    container.scrollTop = container.scrollHeight;
-                }
-            }, 100);
+                 const container = document.getElementById('active-tasks-container');
+                 container.scrollTop = container.scrollHeight;
+                 if(window.innerWidth < 768) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 300);
         }
 
-        function completeTask(id, result) {
-            const account = stockData.find(item => item.id === id);
-            if (account) {
-                account.status = result === 'success' ? 'completed' : 'failed';
-                saveData();
-            }
+        async function updateRecord(id, updates) { 
+            showLoading(true); await supabaseClient.from('g_stock').update({...updates, updated_at: new Date().toISOString()}).eq('id', id);
+            showLoading(false); loadData();
         }
 
-        function markQC(id, status) {
-            const account = stockData.find(item => item.id === id);
-            if(account) {
-                account.status = status;
-                saveData();
-                renderQCList();
-            }
+        async function triggerReset() {
+             showLoading(true);
+             try { 
+                const { error: rpcError } = await supabaseClient.rpc('reset_db');
+                if (rpcError) await supabaseClient.from('g_stock').delete().neq('id', 0);
+                showToast("Reset Complete!");
+             } catch(e) {}
+             showLoading(false); loadData(); 
         }
 
-        function togglePayment(id) {
-            const account = stockData.find(item => item.id === id);
-            if(account) {
-                account.paid = !account.paid;
-                saveData();
-                renderPaymentLists();
-            }
+        // --- TAB & UI CONTROL ---
+        function switchTab(t) {
+            document.querySelectorAll('main > div[id^="view-"]').forEach(d => d.classList.add('hidden'));
+            document.getElementById('view-' + t).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.className = "nav-btn flex-1 md:flex-none min-w-[90px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 text-gray-400 hover:bg-slate-800 hover:text-white border border-slate-700");
+            const activeBtn = document.getElementById('btn-' + t);
+            if(activeBtn) activeBtn.className = "nav-btn flex-1 md:flex-none min-w-[100px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 bg-blue-600 text-white shadow-md";
+            activeTabId = t; updateUI();
         }
 
-        // --- 3. UI FUNCTIONS ---
         function updateUI() {
-            // Stats Calculations
-            const available = stockData.filter(i => i.status === 'available').length;
-            const processing = stockData.filter(i => i.status === 'processing').length;
-            const completed = stockData.filter(i => i.status === 'completed').length;
-            const verified = stockData.filter(i => i.status === 'qc_approved').length;
-            const paidCount = stockData.filter(i => i.status === 'qc_approved' && i.paid).length;
-            const issues = stockData.filter(i => i.status === 'failed' || i.status === 'qc_wrong_pass').length;
+            const s = {
+                avail: stockData.filter(i => i.status === 'available').length,
+                proc: stockData.filter(i => i.status === 'processing').length,
+                comp: stockData.filter(i => i.status === 'completed').length,
+                verif: stockData.filter(i => i.status === 'qc_approved').length,
+                paid: stockData.filter(i => i.status === 'qc_approved' && i.paid).length,
+                iss: stockData.filter(i => i.status === 'failed' || i.status === 'qc_wrong_pass').length
+            };
+            document.getElementById('stat-available').innerText = s.avail;
+            document.getElementById('stat-progress').innerText = s.proc;
+            document.getElementById('stat-completed').innerText = s.comp;
+            document.getElementById('stat-verified').innerText = s.verif;
+            document.getElementById('stat-paid').innerText = s.paid;
+            document.getElementById('stat-issues').innerText = s.iss;
+            
+            const rev = s.verif * 0.25; const cost = s.verif * 40;
+            const totalRev = rev * currentUsdRate;
+            const totalCost = cost;
+            const totalProfit = totalRev - totalCost;
 
-            document.getElementById('stat-available').innerText = available;
-            document.getElementById('stat-progress').innerText = processing;
-            document.getElementById('stat-completed').innerText = completed;
-            document.getElementById('stat-verified').innerText = verified;
-            document.getElementById('stat-paid').innerText = paidCount;
-            document.getElementById('stat-issues').innerText = issues;
-            document.getElementById('active-count').innerText = processing + " Active";
+            document.getElementById('fin-revenue-usd').innerText = "$" + rev.toFixed(2);
+            document.getElementById('fin-revenue-lkr').innerText = "Rs. " + Math.round(totalRev).toLocaleString();
+            
+            document.getElementById('fin-cost-usd').innerText = "-$" + (totalCost / currentUsdRate).toFixed(2);
+            document.getElementById('fin-cost-lkr').innerText = "Rs. " + Math.round(totalCost).toLocaleString();
+            
+            document.getElementById('fin-profit-usd').innerText = "$" + (totalProfit / currentUsdRate).toFixed(2);
+            document.getElementById('fin-profit-lkr').innerText = "Rs. " + Math.round(totalProfit).toLocaleString();
 
-            renderActiveTasks();
-            renderActivityLog();
-            renderAdminTable();
-
-            if(!document.getElementById('view-qc').classList.contains('hidden')) renderQCList();
-            if(!document.getElementById('view-payments').classList.contains('hidden')) renderPaymentLists();
+            renderActiveTasks(); renderQCList(); renderPaymentLists(); renderIssuesList(); renderAdminTable();
         }
 
         function renderActiveTasks() {
             const container = document.getElementById('active-tasks-container');
             const tasks = stockData.filter(i => i.status === 'processing');
-
-            if (tasks.length === 0) {
-                container.innerHTML = `
-                    <div class="h-full flex flex-col justify-center items-center text-gray-400 p-6">
-                        <i class="fa-solid fa-layer-group text-3xl mb-2 text-gray-300"></i>
-                        <p class="text-sm">No active tasks.</p>
-                        <p class="text-xs">Click "Get New Email"</p>
-                    </div>`;
-                return;
-            }
-
-            let html = '';
-            tasks.forEach(task => {
-                html += `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 relative group transition hover:shadow-md">
-                    <div class="flex justify-between items-start mb-3">
-                        <button onclick="copyAllDetails(${task.id})" class="text-[10px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold py-1 px-2 rounded border border-indigo-200 flex items-center gap-1 active:scale-95 transition">
-                            <i class="fa-regular fa-clipboard"></i> Copy All
-                        </button>
-                        <span class="text-[10px] font-mono text-gray-400">#${task.id}</span>
+            document.getElementById('active-count').innerText = tasks.length + " Active";
+            container.innerHTML = tasks.map(t => `<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                <div class="flex justify-between mb-3 items-center">
+                    <button onclick="copyAllDetails('${t.id}')" class="text-[10px] bg-blue-50 text-blue-700 font-bold px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition">COPY DATA</button>
+                    <span class="text-xs font-bold text-slate-400">#${getVisualID(t.id)}</span>
+                </div>
+                <div class="bg-blue-50/50 p-2 rounded-lg border border-blue-50 mb-3">
+                     <div class="text-[10px] text-blue-400 font-bold uppercase">First Name</div>
+                     <div class="font-bold text-slate-800 text-sm">${t.firstname || 'User'}</div>
+                </div>
+                <div class="space-y-2 mb-5">
+                    <div class="flex justify-between bg-slate-50 p-2 rounded-lg font-mono text-xs items-center border border-slate-100">
+                        <span class="truncate pr-2">${t.email}</span>
+                        <button onclick="copyToClipboard('${t.email}')" class="bg-white p-1.5 rounded shadow-sm border border-slate-200 hover:text-blue-600 transition"><i class="fa-regular fa-copy"></i></button>
                     </div>
-                    <div class="space-y-3 mb-4">
-                        <div class="grid grid-cols-1 gap-1">
-                            <label class="text-[9px] font-bold text-gray-400 uppercase">First Name</label>
-                            <div class="flex">
-                                <input type="text" value="${task.firstname || ''}" readonly class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-l px-2 py-1.5 font-bold focus:outline-none">
-                                <button onclick="copyToClipboard('${task.firstname || ''}')" class="bg-gray-100 px-3 rounded-r border border-l-0 border-gray-200 text-gray-500 active:bg-gray-200"><i class="fa-regular fa-copy"></i></button>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 gap-1">
-                            <label class="text-[9px] font-bold text-gray-400 uppercase">Email</label>
-                            <div class="flex">
-                                <input type="text" value="${task.email}" readonly class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-l px-2 py-1.5 font-mono focus:outline-none">
-                                <button onclick="copyToClipboard('${task.email}')" class="bg-gray-100 px-3 rounded-r border border-l-0 border-gray-200 text-gray-500 active:bg-gray-200"><i class="fa-regular fa-copy"></i></button>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 gap-1">
-                            <label class="text-[9px] font-bold text-gray-400 uppercase">Password</label>
-                            <div class="flex">
-                                <input type="text" value="${task.pass}" readonly class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-l px-2 py-1.5 font-mono focus:outline-none">
-                                <button onclick="copyToClipboard('${task.pass}')" class="bg-gray-100 px-3 rounded-r border border-l-0 border-gray-200 text-gray-500 active:bg-gray-200"><i class="fa-regular fa-copy"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="completeTask(${task.id}, 'success')" class="flex-1 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-bold py-2 rounded-lg text-xs transition shadow-sm flex items-center justify-center gap-1"><i class="fa-solid fa-check"></i> Done</button>
-                        <button onclick="completeTask(${task.id}, 'failed')" class="flex-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 active:bg-red-100 font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1"><i class="fa-solid fa-xmark"></i> Fail</button>
+                    <div class="flex justify-between bg-slate-50 p-2 rounded-lg font-mono text-xs items-center border border-slate-100">
+                        <span class="truncate pr-2 text-slate-600">${t.pass}</span>
+                        <button onclick="copyToClipboard('${t.pass}')" class="bg-white p-1.5 rounded shadow-sm border border-slate-200 hover:text-blue-600 transition"><i class="fa-regular fa-copy"></i></button>
                     </div>
                 </div>
-                `;
-            });
-
-            if(container.innerHTML !== html) container.innerHTML = html;
-        }
-
-        function renderPaymentLists() {
-            const pendingContainer = document.getElementById('payment-pending-list');
-            const paidContainer = document.getElementById('payment-paid-list');
-            
-            const verifiedItems = stockData.filter(i => i.status === 'qc_approved');
-            const pendingItems = verifiedItems.filter(i => !i.paid);
-            const paidItems = verifiedItems.filter(i => i.paid);
-
-            // Render Pending
-            if(pendingItems.length === 0) {
-                pendingContainer.innerHTML = '<p class="text-gray-400 text-xs italic">No pending payments.</p>';
-            } else {
-                let html = '';
-                pendingItems.forEach(item => {
-                    html += `
-                        <div class="bg-white p-3 rounded-lg border border-orange-100 shadow-sm flex justify-between items-center">
-                            <div><div class="flex items-center gap-2"><span class="font-mono text-xs font-bold text-gray-700">#${item.id}</span><span class="text-xs text-gray-600 truncate w-32 md:w-48">${item.email}</span></div></div>
-                            <button onclick="togglePayment(${item.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md text-xs font-bold transition shadow-sm active:scale-95">Mark Paid</button>
-                        </div>
-                    `;
-                });
-                pendingContainer.innerHTML = html;
-            }
-
-            // Render Paid
-            if(paidItems.length === 0) {
-                paidContainer.innerHTML = '<p class="text-gray-400 text-xs italic">No paid history.</p>';
-            } else {
-                let html = '';
-                paidItems.reverse().slice(0, 20).forEach(item => {
-                    html += `
-                        <div class="bg-gray-50 p-2 rounded border border-gray-100 flex justify-between items-center">
-                            <div class="flex items-center gap-2 text-gray-500"><span class="font-mono text-[10px]">#${item.id}</span><span class="text-xs line-through decoration-gray-400">${item.email}</span></div>
-                            <button onclick="togglePayment(${item.id})" class="text-[10px] text-red-400 hover:text-red-600 font-medium">Undo</button>
-                        </div>
-                    `;
-                });
-                paidContainer.innerHTML = html;
-            }
-        }
-
-        function renderActivityLog() {
-            const list = document.getElementById('recent-activity-list');
-            const items = stockData.filter(i => ['completed', 'failed', 'qc_approved', 'qc_wrong_pass'].includes(i.status)).reverse().slice(0, 15);
-            
-            if(items.length === 0) {
-                list.innerHTML = '<p class="text-gray-400 text-center text-xs py-4">No recent activity</p>';
-                return;
-            }
-
-            let html = '';
-            items.forEach(item => {
-                let icon = ''; let color = ''; let text = item.status;
-                if(item.status === 'completed') { icon = 'fa-clock text-yellow-500'; color='text-yellow-700'; text="To QC"; }
-                if(item.status === 'qc_approved') { 
-                    icon = 'fa-check-circle text-green-500'; 
-                    color = item.paid ? 'text-indigo-600 font-bold' : 'text-green-700 font-bold'; 
-                    text = item.paid ? "PAID" : "Verified"; 
-                }
-                if(item.status === 'qc_wrong_pass') { icon = 'fa-key text-red-400'; color='text-red-600'; text="Pass"; }
-                if(item.status === 'failed') { icon = 'fa-xmark-circle text-red-500'; color='text-red-600'; text="Fail"; }
-
-                html += `
-                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 mb-1">
-                        <span class="font-mono text-[9px] text-gray-400">#${item.id}</span>
-                        <span class="text-[10px] truncate w-24 text-gray-600">${item.email}</span>
-                        <span class="text-[9px] ${color} flex items-center gap-1"><i class="fa-solid ${icon}"></i> ${text}</span>
-                    </div>
-                `;
-            });
-            list.innerHTML = html;
+                <div class="flex gap-3">
+                    <button onclick="confirmRun('Mark as Registered?', () => updateRecord('${t.id}', {status:'completed'}), 'info')" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">Registered</button>
+                    <button onclick="confirmRun('Mark as Not Registered?', () => updateRecord('${t.id}', {status:'failed'}), 'info')" class="flex-1 bg-white border-2 border-red-100 text-red-500 hover:bg-red-50 font-bold py-3 rounded-xl text-xs transition active:scale-95 uppercase tracking-wide">Not Registered</button>
+                </div>
+            </div>`).join('') || '<div class="h-60 flex flex-col items-center justify-center text-slate-300 gap-2"><i class="fa-solid fa-list-check text-4xl mb-2"></i><p class="text-sm font-bold uppercase tracking-wide">No Active Tasks</p></div>';
         }
 
         function renderQCList() {
             const container = document.getElementById('qc-list-container');
-            const qcItems = stockData.filter(i => i.status === 'completed');
-
-            if(qcItems.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-10 text-gray-400 bg-white rounded-xl shadow border border-gray-100">
-                        <i class="fa-solid fa-clipboard-check text-3xl mb-2 text-gray-300"></i>
-                        <p class="text-sm">All clear.</p>
-                    </div>`;
-                return;
-            }
-
-            let html = '';
-            qcItems.forEach(item => {
-                html += `
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
-                        <div class="flex items-center justify-between mb-2">
-                             <div class="bg-gray-100 text-gray-500 font-bold h-6 w-6 rounded-full flex items-center justify-center text-[10px]">#${item.id}</div>
-                             <div class="flex gap-2">
-                                <button onclick="markQC(${item.id}, 'qc_approved')" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded text-xs font-bold active:scale-95">OK</button>
-                                <button onclick="markQC(${item.id}, 'qc_wrong_pass')" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1 rounded text-xs font-bold active:scale-95">Pass</button>
-                             </div>
-                        </div>
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded border">
-                                <span class="font-mono text-xs text-gray-800 truncate flex-1">${item.email}</span>
-                                <button onclick="copyToClipboard('${item.email}')" class="text-blue-500 p-1"><i class="fa-regular fa-copy"></i></button>
-                            </div>
-                            <div class="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded border">
-                                <span class="font-mono text-xs text-gray-500 truncate flex-1">${item.pass}</span>
-                                <button onclick="copyToClipboard('${item.pass}')" class="text-blue-500 p-1"><i class="fa-regular fa-copy"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                `;
+            const items = stockData.filter(i => i.status === 'completed');
+            let h = '';
+            items.forEach(i => {
+                h += `<div class="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm hover:shadow-md transition"><div class="flex-1 w-full overflow-hidden"><div class="text-[10px] font-bold text-slate-400 mb-1">#${getVisualID(i.id)} - REGISTERED</div><div class="space-y-2 mt-2"><div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100 font-mono text-xs overflow-hidden"><span class="truncate flex-1 text-slate-700">${i.email}</span><button onclick="copyToClipboard('${i.email}')" class="text-slate-400 hover:text-blue-600"><i class="fa-regular fa-copy text-lg"></i></button></div><div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100 font-mono text-xs overflow-hidden"><span class="truncate flex-1 text-slate-700">${i.pass}</span><button onclick="copyToClipboard('${i.pass}')" class="text-slate-400 hover:text-blue-600"><i class="fa-regular fa-copy text-lg"></i></button></div></div></div><div class="flex gap-2 shrink-0 w-full md:w-auto mt-2 md:mt-0"><button onclick="confirmRun('Verify Account?', () => updateRecord('${i.id}', {status:'qc_approved'}), 'info')" class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-sm active:scale-95 uppercase tracking-wide">Verify OK</button><button onclick="confirmRun('Mark Wrong Password?', () => updateRecord('${i.id}', {status:'qc_wrong_pass'}), 'info')" class="flex-1 md:flex-none bg-white border border-red-200 text-red-500 hover:bg-red-50 font-bold px-6 py-2.5 rounded-xl text-xs transition active:scale-95 uppercase tracking-wide">Wrong Pass</button><button onclick="confirmRun('Mark Not Registered?', () => updateRecord('${i.id}', {status:'failed'}), 'info')" class="flex-1 md:flex-none bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold px-4 py-2.5 rounded-xl text-xs transition active:scale-95 uppercase tracking-wide">Not Reg</button></div></div>`;
             });
-            container.innerHTML = html;
+            container.innerHTML = h || '<div class="text-center py-20 bg-white rounded-xl border border-dashed border-slate-200"><i class="fa-solid fa-clipboard-check text-4xl text-slate-200 mb-2"></i><p class="text-slate-400 italic">No pending QC checks</p></div>';
+        }
+
+        function renderPaymentLists() {
+            const pendingList = document.getElementById('payment-pending-list');
+            const paidList = document.getElementById('payment-paid-list');
+            const pending = stockData.filter(i => i.status === 'qc_approved' && !i.paid);
+            let paid = stockData.filter(i => i.status === 'qc_approved' && i.paid);
+            paid.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+            let hPen = '';
+            pending.forEach(i => {
+                hPen += `<div class="bg-white p-3 rounded-xl border border-orange-100 flex justify-between items-center shadow-sm hover:shadow-md transition mb-2"><div class="flex flex-col"><div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 rounded">#${getVisualID(i.id)}</span></div><div class="flex items-center gap-2"><span class="text-xs font-mono font-medium text-slate-700 truncate w-32 md:w-48">${i.email}</span><button onclick="copyToClipboard('${i.email}')" class="text-gray-400 hover:text-blue-500"><i class="fa-regular fa-copy"></i></button></div></div><button onclick="confirmRun('Mark as Paid?', () => togglePayment('${i.id}'), 'info')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide shadow-sm active:scale-95 transition">Pay</button></div>`;
+            });
+            pendingList.innerHTML = hPen || '<p class="text-slate-400 text-xs py-10 text-center italic border border-dashed rounded-xl">No pending payments</p>';
+
+            let hPaid = '', lastG = null;
+            paid.forEach(i => {
+                const g = getRelativeDateLabel(i.updated_at);
+                if(g !== lastG) { hPaid += `<div class="text-[10px] font-bold text-slate-400 uppercase mt-4 mb-2 border-b border-slate-100 tracking-widest pl-1">${g}</div>`; lastG = g; }
+                hPaid += `<div class="bg-slate-50 p-2 rounded flex justify-between items-center mb-1 hover:bg-white border border-transparent hover:border-blue-100 transition"><div class="flex items-center gap-2 text-gray-500 overflow-hidden"><span class="font-mono text-[10px] font-bold">#${getVisualID(i.id)}</span><span class="text-xs font-mono line-through decoration-slate-300 text-slate-400 truncate w-32 md:w-48 font-mono">${i.email}</span><button onclick="copyToClipboard('${i.email}')" class="text-gray-400 hover:text-blue-500 px-1"><i class="fa-regular fa-copy"></i></button></div><button onclick="confirmRun('Undo Payment?', () => togglePayment('${i.id}'), 'info')" class="text-[10px] text-red-400 hover:text-red-600 font-bold border border-red-50 hover:bg-red-50 px-2 py-1 rounded transition">Undo</button></div>`;
+            });
+            paidList.innerHTML = paid.length ? `<div class="mb-4 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold text-center border border-emerald-100">Total Paid Items: ${paid.length}</div>` + hPaid : '<p class="text-slate-400 text-xs py-10 text-center italic border border-dashed rounded-xl">No payment history</p>';
+        }
+
+        function renderIssuesList() {
+            document.getElementById('issues-list-container').innerHTML = stockData.filter(i => i.status === 'failed' || i.status === 'qc_wrong_pass').map(i => `<div class="bg-white p-4 rounded-xl border border-red-100 flex justify-between items-center shadow-sm hover:shadow-md transition"><div><div class="flex items-center gap-2 mb-1"><span class="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded border border-red-100 uppercase tracking-tight">${i.status === 'failed' ? 'Not Registered' : 'Wrong Password'}</span><span class="text-[10px] text-slate-400 font-bold">#${getVisualID(i.id)}</span></div><div class="text-xs font-mono text-slate-700 font-medium">${i.email}</div></div><button onclick="confirmRun('Send to QC again?', () => updateRecord('${i.id}', {status:'completed'}), 'info')" class="bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide active:scale-95">To QC</button></div>`).join('') || '<div class="text-center py-20 bg-white rounded-xl border border-dashed border-slate-200"><i class="fa-regular fa-circle-check text-4xl text-green-200 mb-2"></i><p class="text-slate-400 italic">No issues reported</p></div>';
         }
 
         function renderAdminTable() {
-            const tbody = document.getElementById('stock-table-body');
-            let html = '';
-            [...stockData].reverse().slice(0, 30).forEach(item => { 
-                let color = "bg-gray-100 text-gray-600";
-                if(item.status === 'available') color = "bg-blue-100 text-blue-700";
-                if(item.status === 'processing') color = "bg-yellow-100 text-yellow-700";
-                if(item.status === 'completed') color = "bg-purple-100 text-purple-700";
-                if(item.status === 'qc_approved') color = "bg-emerald-100 text-emerald-700";
-                if(item.status.includes('fail') || item.status.includes('wrong')) color = "bg-red-100 text-red-700";
-
-                let paidStatus = item.paid ? '<span class="text-[9px] font-bold text-indigo-600 border border-indigo-200 px-1 rounded">PAID</span>' : '<span class="text-[9px] text-gray-300">-</span>';
-
-                html += `
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-4 py-2 font-bold text-gray-500">#${item.id}</td>
-                        <td class="px-4 py-2 font-mono text-xs text-gray-700 truncate max-w-[150px]">${item.email}</td>
-                        <td class="px-4 py-2"><span class="${color} text-[9px] uppercase font-bold px-1.5 py-0.5 rounded">${item.status.replace('qc_', '')}</span></td>
-                        <td class="px-4 py-2">${paidStatus}</td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = html;
+            let items = [...stockData].reverse().slice(0, 50); 
+            document.getElementById('stock-table-body').innerHTML = items.map(i => {
+                let badge = "bg-slate-100 text-slate-600";
+                if(i.status === 'available') badge = "bg-blue-50 text-blue-600 border border-blue-100"; else if(i.status === 'processing') badge = "bg-yellow-50 text-yellow-600 border border-yellow-100"; else if(i.status === 'qc_approved') badge = "bg-green-100 text-green-600 border border-green-100"; else if(i.status.includes('fail') || i.status.includes('wrong')) badge = "bg-red-50 text-red-600 border border-red-100";
+                
+                let displayStatus = i.status.replace('qc_', '').toUpperCase();
+                if (i.status === 'failed') displayStatus = 'NOT REGISTERED';
+                
+                return `<tr class="hover:bg-slate-50 transition border-b border-slate-50 last:border-0"><td class="px-4 py-3.5 font-bold text-slate-400">#${getVisualID(i.id)}</td><td class="px-4 py-3.5"><div class="flex items-center gap-2"><span class="font-mono text-xs text-slate-700 truncate w-32 md:w-auto font-medium">${i.email}</span><button onclick="copyToClipboard('${i.email}')" class="text-slate-300 hover:text-blue-500 transition"><i class="fa-regular fa-copy"></i></button></div></td><td class="px-4 py-3.5"><span class="${badge} px-2 py-1 rounded text-[9px] uppercase font-bold tracking-wide">${displayStatus}</span></td><td class="px-4 py-3.5 text-slate-400 text-[10px] font-medium">${getCalendarDate(i.created_at)}</td><td class="px-4 py-3.5 text-center">${i.paid ? '<i class="fa-solid fa-circle-check text-indigo-500 text-sm"></i>' : '<span class="w-2 h-2 rounded-full bg-slate-200 inline-block"></span>'}</td></tr>`;
+            }).join('') || '<tr><td colspan="5" class="py-10 text-center text-slate-400 italic">No Data Available</td></tr>';
         }
 
-        function switchTab(tab) {
-            document.getElementById('view-dashboard').classList.add('hidden');
-            document.getElementById('view-stock').classList.add('hidden');
-            document.getElementById('view-qc').classList.add('hidden');
-            document.getElementById('view-payments').classList.add('hidden');
+        // Global Handlers
+        function handleSearch() {
+            let q = document.getElementById('global-search').value.toLowerCase().trim();
+            const btn = document.getElementById('clear-search-btn'); if(q) btn.classList.remove('hidden'); else btn.classList.add('hidden');
+            if (q === "") { switchTab('dashboard'); return; }
+            document.querySelectorAll('main > div[id^="view-"]').forEach(id => id.classList.add('hidden')); document.getElementById('view-search').classList.remove('hidden');
+            let res = isNaN(q) ? stockData.filter(i => i.email.toLowerCase().includes(q)) : stockData.filter(item => getVisualID(item.id).toString() === q);
+            document.getElementById('search-results-container').innerHTML = res.map(i => {
+                let st = i.status.replace('qc_', '').toUpperCase(); if(st === 'FAILED') st = 'NOT REG';
+                let cls = i.status.includes('fail') || i.status.includes('wrong') ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200';
+                let txt = i.status.includes('fail') || i.status.includes('wrong') ? 'text-red-600' : 'text-slate-600';
+                
+                if (i.status === 'qc_wrong_pass') { cls = "bg-red-50 border-red-200"; txt = "text-red-600"; } 
+                else if (i.status === 'available') { cls = "bg-blue-50 border-blue-200"; txt = "text-blue-600"; }
+                else if (i.status === 'processing') { cls = "bg-yellow-50 border-yellow-200"; txt = "text-yellow-600"; }
+                else if (i.status === 'qc_approved') { cls = "bg-green-50 border-green-200"; txt = "text-green-600"; }
 
-            const btnBase = "flex-1 md:flex-none px-3 py-2 rounded-lg transition font-medium text-xs md:text-sm text-center whitespace-nowrap";
-            const btnInactive = `${btnBase} text-gray-300 hover:bg-slate-800 border border-transparent`;
-            const btnActive = `${btnBase} bg-blue-600 text-white`;
-            const btnBorderedInactive = `${btnBase} text-gray-300 hover:bg-slate-800 border border-slate-700`;
-            const btnBorderedActive = `${btnBase} bg-indigo-600 text-white border border-indigo-500`;
-
-            document.getElementById('btn-dashboard').className = btnInactive;
-            document.getElementById('btn-stock').className = btnInactive;
-            document.getElementById('btn-qc').className = btnBorderedInactive;
-            document.getElementById('btn-payments').className = btnBorderedInactive;
-
-            if (tab === 'dashboard') {
-                document.getElementById('view-dashboard').classList.remove('hidden');
-                document.getElementById('btn-dashboard').className = btnActive;
-            } else if (tab === 'stock') {
-                document.getElementById('view-stock').classList.remove('hidden');
-                document.getElementById('btn-stock').className = btnActive;
-            } else if (tab === 'qc') {
-                document.getElementById('view-qc').classList.remove('hidden');
-                document.getElementById('btn-qc').className = btnBorderedActive;
-                renderQCList();
-            } else if (tab === 'payments') {
-                document.getElementById('view-payments').classList.remove('hidden');
-                document.getElementById('btn-payments').className = btnBorderedActive;
-                renderPaymentLists();
-            }
+                return `<div class="${cls} p-4 rounded-xl border mb-2 flex justify-between items-center shadow-sm"><div class="flex-1 overflow-hidden"><div class="flex items-center gap-2 mb-1"><span class="font-bold text-xs text-slate-400">#${getVisualID(i.id)}</span><span class="${txt} text-[10px] uppercase font-bold px-2 py-0.5 bg-white/50 rounded border border-black/5">${st}</span></div><div class="font-mono text-xs text-slate-800 font-bold truncate">${i.email}</div></div><button onclick="copyAllDetails('${i.id}')" class="ml-3 text-blue-500 bg-blue-50 p-2.5 rounded-lg hover:bg-blue-100 transition"><i class="fa-regular fa-clipboard text-lg"></i></button></div>`;
+            }).join('') || '<p class="text-center py-20 text-slate-400 font-medium">No matches found</p>';
         }
 
-        function copyAllDetails(id) {
-            const task = stockData.find(i => i.id === id);
-            if (task) {
-                const textToCopy = `#${task.id} | Name: ${task.firstname || ''} | Email: ${task.email} | Pass: ${task.pass}`;
-                copyToClipboard(textToCopy);
-            }
-        }
+        function clearSearch() { document.getElementById('global-search').value = ''; handleSearch(); }
+        function togglePayment(id) { const acc = stockData.find(i => i.id == id); if(acc) updateRecord(id, { paid: !acc.paid }); }
+        function showLoading(s) { document.getElementById('loading-overlay').style.display = s ? 'flex' : 'none'; }
+        function showToast(m, c = 'slate') { const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = m; t.style.opacity = '1'; t.style.transform = 'translate(-50%, 0)'; setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translate(-50%, 20px)'; }, 2000); }
+        function copyToClipboard(t) { const el = document.createElement('textarea'); el.value = t; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showToast("Copied!"); }
+        function copyAllDetails(id) { const acc = stockData.find(i => i.id == id); if(acc) { const vid = getVisualID(acc.id); copyToClipboard(`#${vid}\nName: ${acc.firstname}\nEmail: ${acc.email}\nPassword: ${acc.pass}`); } }
+        function copyEmailList(type) { const list = stockData.filter(i => i.status === 'qc_approved' && (type === 'pending' ? !i.paid : i.paid)); if(list.length) { copyToClipboard(list.map(i => i.email).join('\n')); showToast("Emails Copied!"); } else showToast("Nothing to copy"); }
 
-        function copyToClipboard(text) {
-            const tempInput = document.createElement("textarea");
-            tempInput.value = text;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand("copy");
-            document.body.removeChild(tempInput);
-            
-            const toast = document.getElementById('toast');
-            toast.style.opacity = '1';
-            setTimeout(() => toast.style.opacity = '0', 1500);
-        }
-
-        function clearDatabase() {
-            if(confirm("Clear ALL data?")) {
-                localStorage.removeItem('gStockData');
-                stockData = [];
-                updateUI();
-                location.reload();
-            }
-        }
-
-        // Init
-        try {
-            updateUI();
-        } catch(e) {
-            console.error("Init error", e);
-        }
+        window.onload = initApp;
     </script>
 </body>
 </html>
