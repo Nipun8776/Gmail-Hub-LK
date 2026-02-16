@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Gmail Hub LK 🇱🇰</title>
+    <title>Gmail Hub LK </title>
     
     <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,7 +26,7 @@
         
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 100; display: none; justify-content: center; align-items: center; }
         #confirm-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(2px); }
-        .sticky-header { position: sticky; top: 60px; z-index: 40; background-color: #f3f4f6; padding-bottom: 10px; }
+        .sticky-header { position: sticky; top: 70px; z-index: 40; background-color: #f3f4f6; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -37,7 +37,6 @@
     <!-- Dynamic Confirmation Modal -->
     <div id="confirm-modal" class="hidden">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center fade-in border border-gray-100 transform transition-all scale-100 relative overflow-hidden">
-            <!-- Dynamic Top Line -->
             <div id="modal-top-line" class="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
             
             <div id="modal-icon-bg" class="mb-5 bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-sm transition-colors">
@@ -54,15 +53,15 @@
                 <button id="modal-btn-yes" class="flex-1 py-3 text-white font-bold rounded-xl shadow-lg active:scale-95 transition text-sm">Confirm</button>
             </div>
         </div>
-    </div><!-- Navbar (Clean Center Title) -->
+    </div>
+
+    <!-- Navbar -->
     <nav class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
         <div class="container mx-auto px-4 py-3">
-            <!-- Centered Title -->
             <div class="flex justify-center items-center mb-3">
-                <h1 class="text-xl font-bold tracking-widest text-center uppercase">Gmail Hub LK 🇱🇰</h1>
+                <h1 class="text-xl font-bold tracking-widest text-center uppercase">Gmail Hub LK </h1>
             </div>
             
-            <!-- Scrollable Menu -->
             <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar w-full justify-start md:justify-center">
                 <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn bg-blue-600 text-white min-w-[100px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-md">Dashboard</button>
                 <button onclick="switchTab('qc')" id="btn-qc" class="nav-btn text-gray-400 hover:bg-slate-800 min-w-[90px] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 border border-slate-700">QC Check</button>
@@ -75,7 +74,7 @@
 
     <main class="container mx-auto p-3 md:p-6 flex-1 flex flex-col max-w-7xl">
         
-        <!-- Controls Row (Search Only - Filter Removed) -->
+        <!-- Controls Row -->
         <div class="sticky-header pt-2 pb-2">
             <div class="relative shadow-sm">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fa-solid fa-search text-gray-400"></i></span>
@@ -87,7 +86,9 @@
         <div id="view-search" class="hidden fade-in pb-10">
             <div class="flex items-center justify-between border-b pb-2 mb-4"><h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest">Search Results</h3><span id="search-count" class="bg-gray-200 text-gray-600 py-0.5 px-2 rounded text-xs font-bold">0</span></div>
             <div id="search-results-container" class="space-y-3"></div>
-        </div><!-- DASHBOARD -->
+        </div>
+
+        <!-- DASHBOARD -->
         <div id="view-dashboard" class="fade-in flex flex-col h-full">
             <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6 shrink-0">
                 <div class="bg-white p-3 rounded-xl shadow-sm border-b-4 border-blue-500"><p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide">Stock</p><h2 class="text-xl font-bold text-gray-800" id="stat-available">0</h2></div>
@@ -103,47 +104,51 @@
                 <div class="md:w-1/3 flex flex-col gap-5">
                     <div class="bg-white p-6 rounded-2xl shadow-lg border border-blue-50 text-center relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
-                        <!-- Cloud Icon -->
-                        <div class="mb-4 bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-blue-600 shadow-sm">
-                            <i class="fa-solid fa-cloud-arrow-down text-3xl"></i>
-                        </div>
                         <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Request Account</h3>
-                        <!-- Direct Action for Get New Email (No Confirm), Auto Scroll -->
                         <button onclick="getNewAccount()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-wide text-sm">
                             <i class="fa-solid fa-plus-circle"></i> Get New Email
                         </button>
                         <p id="error-msg" class="text-red-500 text-xs mt-3 hidden font-bold bg-red-100 py-1 px-3 rounded-lg inline-block">NO STOCK AVAILABLE!</p>
                     </div>
 
-                    <!-- Earnings (Updated Logic) -->
+                    <!-- Earnings -->
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                         <h4 class="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2"><i class="fa-solid fa-coins text-yellow-500"></i> Earnings</h4>
-                        <div class="flex items-center gap-2 mb-4 bg-gray-50 p-2 rounded border border-gray-200">
-                            <label class="text-[10px] font-bold text-gray-500 whitespace-nowrap">1 USD = </label>
-                            <input type="number" id="usd-rate" value="300" onchange="saveSettings()" class="w-16 bg-white border border-gray-300 rounded px-1 text-xs font-bold text-right focus:outline-none focus:border-blue-500">
-                            <span class="text-[10px] font-bold text-gray-500">LKR</span>
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-100">
+                                <label class="text-[10px] font-bold text-gray-500">1 USD (Rs):</label>
+                                <input type="number" id="usd-rate" value="300" onchange="saveSettings()" class="w-16 bg-transparent text-xs font-bold text-right outline-none text-gray-700 border-b border-gray-300 focus:border-blue-500">
+                            </div>
+                            <div class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-100">
+                                <label class="text-[10px] font-bold text-gray-500">Revenue ($):</label>
+                                <input type="number" step="0.01" id="revenue-rate" value="0.25" onchange="saveSettings()" class="w-16 bg-transparent text-xs font-bold text-right outline-none text-gray-700 border-b border-gray-300 focus:border-blue-500">
+                            </div>
+                            <div class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-100">
+                                <label class="text-[10px] font-bold text-gray-500">Worker Pay (Rs):</label>
+                                <input type="number" id="worker-pay" value="40" onchange="saveSettings()" class="w-16 bg-transparent text-xs font-bold text-right outline-none text-gray-700 border-b border-gray-300 focus:border-blue-500">
+                            </div>
                         </div>
-                        <div class="space-y-3">
+
+                        <div class="space-y-3 pt-2 border-t border-dashed border-gray-200">
                             <div class="flex justify-between items-center text-xs">
-                                <span class="text-gray-500 font-medium">Revenue ($0.25/acc)</span>
+                                <span class="text-gray-500 font-medium">Total Revenue</span>
                                 <div class="text-right">
                                     <div class="font-bold text-gray-800" id="fin-revenue-usd">$0.00</div>
-                                    <div class="text-[10px] text-gray-400 font-mono" id="fin-revenue-lkr">Rs. 0</div>
+                                    <div class="text-[10px] text-gray-400 font-mono" id="fin-revenue-lkr">Rs. 0.00</div>
                                 </div>
                             </div>
                             <div class="flex justify-between items-center text-xs">
-                                <span class="text-gray-500 font-medium">Worker (Rs.40/acc)</span>
+                                <span class="text-gray-500 font-medium">Worker Cost</span>
                                 <div class="text-right">
                                     <div class="font-bold text-red-500" id="fin-cost-usd">-$0.00</div>
-                                    <div class="text-[10px] text-red-300 font-mono" id="fin-cost-lkr">Rs. 0</div>
+                                    <div class="text-[10px] text-red-300 font-mono" id="fin-cost-lkr">Rs. 0.00</div>
                                 </div>
                             </div>
-                            <hr class="border-dashed border-gray-200">
                             <div class="flex justify-between items-center bg-green-50 p-3 rounded-xl border border-green-100 mt-2">
                                 <span class="text-green-800 font-bold text-xs uppercase tracking-wider">Net Profit</span>
                                 <div class="text-right">
                                     <div class="font-bold text-green-700 text-sm" id="fin-profit-usd">$0.00</div>
-                                    <div class="font-bold text-green-600 text-[10px] font-mono" id="fin-profit-lkr">Rs. 0</div>
+                                    <div class="font-bold text-green-600 text-[10px] font-mono" id="fin-profit-lkr">Rs. 0.00</div>
                                 </div>
                             </div>
                         </div>
@@ -152,9 +157,7 @@
                     <button onclick="confirmRun('This will delete all data. Are you sure?', triggerReset, 'danger')" class="w-full bg-white border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 font-bold py-3 rounded-xl shadow-sm transition active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-widest mt-2">
                         <i class="fa-solid fa-trash-can"></i> Reset All Data
                     </button>
-                </div>
-                
-                <!-- Right Panel: Active Tasks -->
+                </div><!-- Right Panel: Active Tasks -->
                 <div class="md:w-2/3 flex flex-col bg-slate-50 rounded-2xl border border-gray-200 p-3 overflow-hidden shadow-inner">
                     <div class="flex justify-between items-center px-2 mb-3">
                         <h3 class="font-bold text-gray-700 text-sm uppercase tracking-tight flex items-center gap-2">
@@ -165,7 +168,9 @@
                     <div id="active-tasks-container" class="task-list space-y-3 pb-20 md:pb-5 overflow-y-auto h-full pr-1"></div>
                 </div>
             </div>
-        </div><!-- QC VIEW -->
+        </div>
+
+        <!-- QC VIEW -->
         <div id="view-qc" class="hidden fade-in pb-10">
             <div class="max-w-4xl mx-auto">
                 <div class="flex justify-between items-end mb-6 border-b pb-4">
@@ -234,7 +239,7 @@
                         <table class="w-full text-xs text-left">
                             <thead class="bg-slate-100 text-slate-600 uppercase tracking-wider font-bold">
                                 <tr>
-                                    <th class="px-5 py-3">Visual ID</th>
+                                    <th class="px-5 py-3">ID</th>
                                     <th class="px-5 py-3">Email Identity</th>
                                     <th class="px-5 py-3">Status</th>
                                     <th class="px-5 py-3">Date</th>
@@ -250,9 +255,11 @@
     </main>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed top-24 left-1/2 transform -translate-x-1/2 z-[100] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none text-sm font-bold flex items-center gap-2 border border-slate-700">
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[100] bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none text-sm font-bold flex items-center gap-2 border border-slate-700">
         <i class="fa-solid fa-circle-check text-green-400 text-lg"></i><span id="toast-msg">Copied!</span>
-    </div><!-- JavaScript Logic -->
+    </div>
+
+    <!-- JavaScript Logic -->
     <script>
         // CONFIGURATION
         const SUPABASE_URL = 'https://eeowqtejbpwwvadfsolb.supabase.co';
@@ -261,9 +268,11 @@
 
         let stockData = [];
         let activeTabId = 'dashboard';
+        
+        // Settings State
         let currentUsdRate = 300;
-        let isActivityExpanded = false;
-        let filterDate = null;
+        let currentRevenue = 0.25;
+        let currentWorkerPay = 40; 
 
         // Initialize App
         async function initApp() {
@@ -280,21 +289,39 @@
             } catch (err) { console.error('Load Error:', err); }
         }
 
-        // Settings (USD Rate)
+        // Settings (USD Rate, Revenue, Pay)
         async function loadSettings() {
             try {
-                const { data, error } = await supabaseClient.from('app_settings').select('value').eq('key', 'usd_rate').single();
+                const { data, error } = await supabaseClient.from('app_settings').select('*');
                 if (data) {
-                    currentUsdRate = parseFloat(data.value);
+                    data.forEach(setting => {
+                        if (setting.key === 'usd_rate') currentUsdRate = parseFloat(setting.value);
+                        if (setting.key === 'revenue') currentRevenue = parseFloat(setting.value);
+                        if (setting.key === 'worker_pay') currentWorkerPay = parseFloat(setting.value);
+                    });
+                    
+                    // Update Inputs
                     document.getElementById('usd-rate').value = currentUsdRate;
+                    document.getElementById('revenue-rate').value = currentRevenue;
+                    document.getElementById('worker-pay').value = currentWorkerPay;
                 }
             } catch (err) {}
         }
 
         async function saveSettings() {
             const newRate = document.getElementById('usd-rate').value;
-            currentUsdRate = parseFloat(newRate);
-            await supabaseClient.from('app_settings').upsert({ key: 'usd_rate', value: newRate.toString() });
+            const newRevenue = document.getElementById('revenue-rate').value;
+            const newWorkerPay = document.getElementById('worker-pay').value;
+
+            currentUsdRate = parseFloat(newRate) || 0;
+            currentRevenue = parseFloat(newRevenue) || 0;
+            currentWorkerPay = parseFloat(newWorkerPay) || 0;
+
+            await supabaseClient.from('app_settings').upsert([
+                { key: 'usd_rate', value: currentUsdRate.toString() },
+                { key: 'revenue', value: currentRevenue.toString() },
+                { key: 'worker_pay', value: currentWorkerPay.toString() }
+            ]);
             updateUI(); 
         }
 
@@ -322,6 +349,10 @@
             if (target.getTime() === today.getTime()) return "Today";
             if (target.getTime() === yesterday.getTime()) return "Yesterday";
             return target.toISOString().split('T')[0];
+        };
+
+        const formatCurrency = (val) => {
+             return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
 
         // --- CONFIRMATION SYSTEM ---
@@ -368,7 +399,7 @@
         async function processBulkUpload() {
             const text = document.getElementById('bulk-input').value; if(!text.trim()) return;
             const lines = text.split('\n'); let current = {}; let toAdd = [];
-            let duplicates = 0; // Counter for duplicates
+            let duplicates = 0; 
 
             lines.forEach(line => {
                 const t = line.trim();
@@ -377,11 +408,9 @@
                 else if (t.toLowerCase().includes("password")) current.ps = t.split(/:(.+)/)[1].trim();
                 
                 if(current.em && current.ps) {
-                    // DUPLICATE CHECK: Check against existing stockData
                     if (stockData.some(i => i.email === current.em)) {
                         duplicates++; 
                     } else {
-                        // Check if already in toAdd to prevent duplicates within batch
                         if (!toAdd.some(i => i.email === current.em)) {
                             toAdd.push({ firstname: current.fn || '', email: current.em, pass: current.ps, status: 'available' });
                         }
@@ -402,7 +431,6 @@
                 loadData(); 
                 showToast(`${toAdd.length} Stock Added!`); 
             } else if (duplicates > 0 && toAdd.length === 0) {
-                // Toast already shown
             } else {
                 showToast("No valid data found", "red");
             }
@@ -461,19 +489,24 @@
             document.getElementById('stat-paid').innerText = s.paid;
             document.getElementById('stat-issues').innerText = s.iss;
             
-            const rev = s.verif * 0.25; const cost = s.verif * 40;
-            const totalRev = rev * currentUsdRate;
-            const totalCost = cost;
-            const totalProfit = totalRev - totalCost;
+            // FIXED CALCULATION (Revenue in USD, Worker Cost in LKR)
+            const revenueUSD = s.verif * currentRevenue;
+            const workerCostLKR = s.verif * currentWorkerPay;
+            
+            const totalRevenueLKR = revenueUSD * currentUsdRate;
+            const profitLKR = totalRevenueLKR - workerCostLKR;
+            
+            const workerCostUSD = (currentUsdRate > 0) ? (workerCostLKR / currentUsdRate) : 0;
+            const profitUSD = revenueUSD - workerCostUSD;
 
-            document.getElementById('fin-revenue-usd').innerText = "$" + rev.toFixed(2);
-            document.getElementById('fin-revenue-lkr').innerText = "Rs. " + Math.round(totalRev).toLocaleString();
+            document.getElementById('fin-revenue-usd').innerText = "$" + formatCurrency(revenueUSD);
+            document.getElementById('fin-revenue-lkr').innerText = "Rs. " + formatCurrency(totalRevenueLKR);
             
-            document.getElementById('fin-cost-usd').innerText = "-$" + (totalCost / currentUsdRate).toFixed(2);
-            document.getElementById('fin-cost-lkr').innerText = "Rs. " + Math.round(totalCost).toLocaleString();
+            document.getElementById('fin-cost-usd').innerText = "-$" + formatCurrency(workerCostUSD);
+            document.getElementById('fin-cost-lkr').innerText = "Rs. " + formatCurrency(workerCostLKR);
             
-            document.getElementById('fin-profit-usd').innerText = "$" + (totalProfit / currentUsdRate).toFixed(2);
-            document.getElementById('fin-profit-lkr').innerText = "Rs. " + Math.round(totalProfit).toLocaleString();
+            document.getElementById('fin-profit-usd').innerText = "$" + formatCurrency(profitUSD);
+            document.getElementById('fin-profit-lkr').innerText = "Rs. " + formatCurrency(profitLKR);
 
             renderActiveTasks(); renderQCList(); renderPaymentLists(); renderIssuesList(); renderAdminTable();
         }
